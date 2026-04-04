@@ -1,0 +1,47 @@
+# WorkOrder Template
+# Copy this template to create new work orders
+
+WorkOrder:
+  id: WO-0001  # Unique ID: WO-NNNN
+  title: "Brief title of the work order"
+  created: "2026-01-15T10:00:00Z"  # ISO 8601 datetime
+  plan_id: PLAN-2026-0001  # Parent plan ID
+  work_package: E-001  # Parent work package/epic (optional)
+
+  # Objective: What this WO accomplishes (measurable outcome)
+  objective: |
+    Clear, measurable outcome that this work order delivers.
+    Should be specific, testable, and achievable in 1-3 days.
+
+  # Definition of Done: How we verify completion
+  definition_of_done:
+    - verification: "What we're verifying"
+      command: "bash command or test to run"
+      expected_output: "pattern or text that indicates success"
+      threshold: "success criteria (quantifiable)"
+
+    - verification: "Another verification check"
+      command: "pytest tests/test_feature.py -v"
+      expected_output: "passed"
+      threshold: "100% test pass rate"
+
+  # Scope: Files and directories this WO can modify
+  scope:
+    allow:
+      - "src/feature/**/*"
+      - "tests/test_feature.py"
+    deny:
+      - "src/feature/deprecated/**/*"  # Reserved for other WOs
+
+  # Dependencies: Other WOs that must complete first
+  dependencies:
+    - WO-0000  # List of WO IDs that block this WO
+
+  # Priority: P0 (Critical), P1 (Important), P2 (Nice-to-have)
+  priority: P0
+  estimated_hours: 16  # Optional: Time estimate
+
+  # Claim Links: Which requirements this WO addresses
+  claim_links:
+    - C-001  # Link to claim(s) this WO fulfills
+    - C-002

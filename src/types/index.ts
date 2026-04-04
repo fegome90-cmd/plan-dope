@@ -1,0 +1,100 @@
+// Tipos canónicos del dominio plan_dope v1
+
+// Estados del plan según ARCHITECTURE-v1.md
+export type PlanState = 'DRAFT' | 'DERIVED' | 'VALIDATED' | 'REVIEWED' | 'HANDOFF_READY';
+
+// Veredictos de review según ARCHITECTURE-v1.md
+export type ReviewVerdict = 'PASS' | 'PASS_WITH_NOTES' | 'FAIL';
+
+// Razones de handoff según ARCHITECTURE-v1.md
+export type HandoffReason = 'pause' | 'transfer' | 'completion';
+
+// Metadata mínima de un plan
+export interface PlanMetadata {
+  plan_id: string;
+  created_at: string;
+  updated_at: string;
+  state: PlanState;
+  source_md_path?: string;
+  source_md_fingerprint?: string;
+}
+
+// Shape mínimo de plan.yaml según ARCHITECTURE-v1.md
+export interface PlanYaml {
+  plan_id: string;
+  source_md_path: string;
+  source_md_fingerprint: string;
+  derived_at: string;
+  scope: string;
+  phases: Phase[];
+  risks: Risk[];
+  validation_criteria: string[];
+}
+
+export interface Phase {
+  name: string;
+  description: string;
+  tasks?: string[];
+}
+
+export interface Risk {
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  mitigation?: string;
+}
+
+// Shape mínimo de validation-report.yaml
+export interface ValidationReport {
+  plan_id: string;
+  plan_yaml_fingerprint: string;
+  validated_at: string;
+  status: 'valid' | 'invalid';
+  errors: ValidationError[];
+  warnings: string[];
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+// Shape mínimo de review-report.md
+export interface ReviewReport {
+  run_id: string;
+  plan_id: string;
+  plan_md_fingerprint: string;
+  reviewed_at: string;
+  verdict: ReviewVerdict;
+  findings: Finding[];
+  notes: string[];
+}
+
+export interface Finding {
+  severity: 'critical' | 'warning' | 'suggestion';
+  category: string;
+  description: string;
+}
+
+// Payload mínimo hacia checkpoint-card
+export interface CheckpointPayload {
+  name: string;
+  current_plan: string;
+  completed_tasks: string[];
+  pending_tasks: string[];
+  pending_errors: string[];
+  next_agent_prompt: string;
+  validation_report: string;
+  handoff_reason: HandoffReason;
+  delegation_context?: Record<string, unknown>;
+}
+
+// Configuración global del CLI
+export interface CliConfig {
+  default_project_path?: string;
+  artifacts_base_path?: string; // default: _ctx/plans/
+}
+
+// Opciones compartidas entre comandos
+export interface CommandOptions {
+  project?: string;
+}

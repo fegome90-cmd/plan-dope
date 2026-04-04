@@ -1,0 +1,40 @@
+# PlanPack Template
+# This represents the complete plan structure
+
+# PlanPack Directory Structure:
+# _ctx/plans/PLAN-YYYY-NNNN/
+# ├── requirements.yaml           # Parsed RequirementSet
+# ├── strategies/
+# │   └── strategy-evaluation.yaml # Generated strategies with scores
+# ├── plan-tree.yaml              # Hierarchical decomposition
+# ├── work_orders/
+# │   ├── WO-0001.yaml           # Generated Work Orders
+# │   ├── WO-0002.yaml
+# │   └── ...
+# ├── dods/
+# │   ├── WO-0001-dod.yaml       # Definition of Done files
+# │   ├── WO-0002-dod.yaml
+# │   └── ...
+# └── validation-report.yaml      # Validation results
+
+# Example validation report structure (matches ValidationResult model):
+ValidationResult:
+  plan_id: PLAN-2026-0001
+  validated_at: "2026-01-15T14:30:00Z"  # ISO 8601 datetime
+  passed: true
+
+  schema_validation: true
+  traceability:
+    all_claims_addressed: true
+    orphaned_claims: []
+    all_wos_have_files: true
+    missing_wo_files: []
+    no_circular_dependencies: true
+    circular_dependency_chains: []
+    all_dods_valid: true
+    invalid_dods: []
+
+  constraint_satisfaction: true
+  scope_conflicts: false
+
+  issues: []  # List of ValidationIssue objects (empty when all pass)
