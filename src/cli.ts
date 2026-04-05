@@ -80,9 +80,7 @@ function generateCompletion(shell: string, program: Command): string | null {
   const cmdNames = commands.map((c) => c.name()).join(' ');
   const cmdList = commands.map((c) => c.name());
   const allOptions = [
-    ...new Set(
-      commands.flatMap((c) => c.options.map((o) => o.long || o.short)).filter(Boolean)
-    ),
+    ...new Set(commands.flatMap((c) => c.options.map((o) => o.long || o.short)).filter(Boolean)),
   ].join(' ');
 
   if (shell === 'bash') {
@@ -139,7 +137,10 @@ _plan_dope_completion
 
   if (shell === 'fish') {
     return `# Fish shell completion for plan_dope
-${commands.map((c) => c.name()).map((name) => `complete -c plan -n "__fish_use_subcommand" -a ${name}`).join('\n')}
+${commands
+  .map((c) => c.name())
+  .map((name) => `complete -c plan -n "__fish_use_subcommand" -a ${name}`)
+  .join('\n')}
 ${commands
   .flatMap((c) => [
     `complete -c plan -n "__fish_seen_subcommand_from ${c.name()}" -l project -d "Path del proyecto target"`,

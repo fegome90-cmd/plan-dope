@@ -45,9 +45,7 @@ export async function createCheckpoint(
   const yamlParsed = parse(yamlContent);
   const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
   if (!storedFp) {
-    throw new Error(
-      `plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`
-    );
+    throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
   }
   if (storedFp !== currentFp) {
     throw new Error(
