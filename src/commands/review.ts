@@ -3,20 +3,15 @@ import { resolveProjectRoot } from '../core/resolver.js';
 import { reviewPlan } from '../core/review.js';
 import type { CommandOptions } from '../types/index.js';
 
-export function reviewCommand(program: Command): void {
-  program
-    .command('review')
-    .description('Revisar plan y producir review-report.md')
-    .option('-p, --project <path>', 'Path del proyecto target')
-    .option('--plan-id <plan-id>', 'ID del plan a revisar')
-    .action(async (opts: CommandOptions & { planId?: string }) => {
-      try {
-        const projectRoot = resolveProjectRoot(opts.project);
-        const reportPath = await reviewPlan(projectRoot, opts.planId);
-        console.log(`Reporte de review: ${reportPath}`);
-      } catch (error) {
-        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-        process.exit(1);
-      }
-    });
+export function reviewCommand(_program: Command, opts: CommandOptions & { planId?: string }): void {
+  const projectRoot = resolveProjectRoot(opts.project);
+  reviewPlan(projectRoot, opts.planId).then(
+    (reportPath) => {
+      process.stdout.write(`Reporte de review: ${reportPath}\n`);
+    },
+    (error) => {
+      process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exit(1);
+    }
+  );
 }

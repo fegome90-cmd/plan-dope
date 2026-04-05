@@ -36,6 +36,15 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
     );
   }
 
+  // Verify validation-report corresponds to current plan.yaml
+  const yamlFp = fingerprint(yamlContent);
+  const validationYamlFp = validationReport.plan_yaml_fingerprint as string | undefined;
+  if (validationYamlFp && validationYamlFp !== yamlFp) {
+    throw new Error(
+      `validation-report.yaml is stale (fingerprint ${validationYamlFp}) and does not match current plan.yaml (${yamlFp}). Re-run \`plan validate\`.`
+    );
+  }
+
   const runId = `review-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
   const findings: Finding[] = [];

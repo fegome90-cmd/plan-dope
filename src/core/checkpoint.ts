@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import type { HandoffReason } from '../types/index.js';
-import { fingerprint } from './derive.js';
 import { now } from './create.js';
+import { fingerprint } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
 

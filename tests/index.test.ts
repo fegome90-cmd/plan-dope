@@ -1,19 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, rmSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { randomBytes } from 'crypto';
-import { createPlan } from '../src/core/create.js';
-import { derivePlan, checkAndInvalidateDrift, fingerprint } from '../src/core/derive.js';
-import type { DriftOutcome } from '../src/types/index.js';
-import { validatePlan } from '../src/core/validate.js';
-import { reviewPlan } from '../src/core/review.js';
-import { createCheckpoint } from '../src/core/checkpoint.js';
-import { readState, updateState, validateStateTransition } from '../src/core/state.js';
-import { resolveProjectRoot, findPlanId, getPlanDir } from '../src/core/resolver.js';
-import { isGitRepo } from '../src/core/git.js';
-import { readGlobalConfig, writeGlobalConfig, readProjectOverride, resolveConfig, resolveArtifactsBasePath } from '../src/core/config.js';
+import { execSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { createCheckpoint } from '../src/core/checkpoint.js';
+import {
+  readGlobalConfig,
+  readProjectOverride,
+  resolveArtifactsBasePath,
+  resolveConfig,
+  writeGlobalConfig,
+} from '../src/core/config.js';
+import { createPlan } from '../src/core/create.js';
+import { checkAndInvalidateDrift, derivePlan, fingerprint } from '../src/core/derive.js';
+import { isGitRepo } from '../src/core/git.js';
+import { findPlanId, getPlanDir, resolveProjectRoot } from '../src/core/resolver.js';
+import { reviewPlan } from '../src/core/review.js';
+import { readState, validateStateTransition } from '../src/core/state.js';
+import { validatePlan } from '../src/core/validate.js';
+import type { DriftOutcome } from '../src/types/index.js';
 
 let tmpDir: string;
 
@@ -50,7 +56,9 @@ describe('resolveProjectRoot', () => {
   });
 
   it('throws on non-existent path', () => {
-    expect(() => resolveProjectRoot('/nonexistent/path-xyz-123')).toThrow('Project path does not exist');
+    expect(() => resolveProjectRoot('/nonexistent/path-xyz-123')).toThrow(
+      'Project path does not exist'
+    );
   });
 
   it('throws when path is not a git repository', () => {
@@ -163,7 +171,9 @@ describe('reviewPlan', () => {
   it('throws if validation-report.yaml not found', async () => {
     await createPlan(tmpDir, 'test-001');
     await derivePlan(tmpDir, 'test-001');
-    await expect(reviewPlan(tmpDir, 'test-001')).rejects.toThrow('validation-report.yaml not found');
+    await expect(reviewPlan(tmpDir, 'test-001')).rejects.toThrow(
+      'validation-report.yaml not found'
+    );
   });
 
   it('throws if plan.yaml fingerprint does not match plan.md', async () => {
@@ -172,7 +182,7 @@ describe('reviewPlan', () => {
     await validatePlan(tmpDir, 'fp-mismatch-review');
     // Modify plan.md after derive to cause fingerprint mismatch
     const planPath = join(getPlanDir(tmpDir, 'fp-mismatch-review'), 'plan.md');
-    writeFileSync(planPath, readFileSync(planPath, 'utf-8') + '\n# Modified after derive', 'utf-8');
+    writeFileSync(planPath, `${readFileSync(planPath, 'utf-8')}\n# Modified after derive`, 'utf-8');
     await expect(reviewPlan(tmpDir, 'fp-mismatch-review')).rejects.toThrow('fingerprint mismatch');
   });
 });
@@ -201,7 +211,9 @@ describe('createCheckpoint', () => {
 
   it('throws if plan is not REVIEWED', async () => {
     await createPlan(tmpDir, 'test-001');
-    await expect(createCheckpoint(tmpDir, 'test-001', 'transfer')).rejects.toThrow("must be 'REVIEWED'");
+    await expect(createCheckpoint(tmpDir, 'test-001', 'transfer')).rejects.toThrow(
+      "must be 'REVIEWED'"
+    );
   });
 });
 
@@ -284,7 +296,7 @@ describe('checkAndInvalidateDrift', () => {
     await reviewPlan(tmpDir, 'drift-test');
 
     const planPath = join(getPlanDir(tmpDir, 'drift-test'), 'plan.md');
-    writeFileSync(planPath, readFileSync(planPath, 'utf-8') + '\n# Modified', 'utf-8');
+    writeFileSync(planPath, `${readFileSync(planPath, 'utf-8')}\n# Modified`, 'utf-8');
 
     await derivePlan(tmpDir, 'drift-test');
 
@@ -299,7 +311,7 @@ describe('checkAndInvalidateDrift', () => {
     await reviewPlan(tmpDir, 'drift-state-test');
 
     const planPath = join(getPlanDir(tmpDir, 'drift-state-test'), 'plan.md');
-    writeFileSync(planPath, readFileSync(planPath, 'utf-8') + '\n# Changed', 'utf-8');
+    writeFileSync(planPath, `${readFileSync(planPath, 'utf-8')}\n# Changed`, 'utf-8');
 
     await derivePlan(tmpDir, 'drift-state-test');
 
@@ -344,7 +356,7 @@ describe('extended YAML fields', () => {
     const content = readFileSync(planPath, 'utf-8');
     const withTags = content.replace(
       '## Tags\n\n<!-- Optional: comma-separated tags for filtering, e.g. backend, refactoring, urgent -->',
-      '## Tags\n\nbackend, refactoring, urgent',
+      '## Tags\n\nbackend, refactoring, urgent'
     );
     writeFileSync(planPath, withTags, 'utf-8');
 
@@ -360,7 +372,7 @@ describe('extended YAML fields', () => {
     const content = readFileSync(planPath, 'utf-8');
     const withAssignee = content.replace(
       '## Assignee\n\n<!-- Optional: person or role responsible for this plan -->',
-      '## Assignee\n\n@senior-dev',
+      '## Assignee\n\n@senior-dev'
     );
     writeFileSync(planPath, withAssignee, 'utf-8');
 
@@ -376,7 +388,7 @@ describe('extended YAML fields', () => {
     const content = readFileSync(planPath, 'utf-8');
     const withDeps = content.replace(
       '## Dependencies\n\n<!-- Optional: list of plan IDs this plan depends on, one per line -->',
-      '## Dependencies\n\n- plan-001\n- plan-002',
+      '## Dependencies\n\n- plan-001\n- plan-002'
     );
     writeFileSync(planPath, withDeps, 'utf-8');
 
@@ -392,7 +404,7 @@ describe('extended YAML fields', () => {
     const content = readFileSync(planPath, 'utf-8');
     const withEffort = content.replace(
       '## Estimated Effort\n\n<!-- Optional: human-readable estimate, e.g. 3d, 1w, 2sprints -->',
-      '## Estimated Effort\n\n3d',
+      '## Estimated Effort\n\n3d'
     );
     writeFileSync(planPath, withEffort, 'utf-8');
 
@@ -408,19 +420,19 @@ describe('extended YAML fields', () => {
     let content = readFileSync(planPath, 'utf-8');
     content = content.replace(
       '## Tags\n\n<!-- Optional: comma-separated tags for filtering, e.g. backend, refactoring, urgent -->',
-      '## Tags\n\nbackend, urgent',
+      '## Tags\n\nbackend, urgent'
     );
     content = content.replace(
       '## Assignee\n\n<!-- Optional: person or role responsible for this plan -->',
-      '## Assignee\n\n@tech-lead',
+      '## Assignee\n\n@tech-lead'
     );
     content = content.replace(
       '## Dependencies\n\n<!-- Optional: list of plan IDs this plan depends on, one per line -->',
-      '## Dependencies\n\n- plan-arch-001',
+      '## Dependencies\n\n- plan-arch-001'
     );
     content = content.replace(
       '## Estimated Effort\n\n<!-- Optional: human-readable estimate, e.g. 3d, 1w, 2sprints -->',
-      '## Estimated Effort\n\n1w',
+      '## Estimated Effort\n\n1w'
     );
     writeFileSync(planPath, content, 'utf-8');
 
@@ -428,7 +440,9 @@ describe('extended YAML fields', () => {
     const reportPath = await validatePlan(tmpDir, 'full-plan');
     expect(existsSync(reportPath)).toBe(true);
 
-    const yamlContent = parse(readFileSync(join(getPlanDir(tmpDir, 'full-plan'), 'plan.yaml'), 'utf-8'));
+    const yamlContent = parse(
+      readFileSync(join(getPlanDir(tmpDir, 'full-plan'), 'plan.yaml'), 'utf-8')
+    );
     expect(yamlContent.tags).toEqual(['backend', 'urgent']);
     expect(yamlContent.assignee).toBe('@tech-lead');
     expect(yamlContent.dependencies).toEqual(['plan-arch-001']);
@@ -475,7 +489,11 @@ describe('config boundaries', () => {
 
   it('reads only allowed keys from project override', () => {
     const projectConfigPath = join(tmpDir, '.plan_dope.yml');
-    writeFileSync(projectConfigPath, 'artifacts_base_path: _project_ctx\nunknown_key: should_be_ignored\n', 'utf-8');
+    writeFileSync(
+      projectConfigPath,
+      'artifacts_base_path: _project_ctx\nunknown_key: should_be_ignored\n',
+      'utf-8'
+    );
 
     const override = readProjectOverride(tmpDir);
     expect(override).toEqual({ artifacts_base_path: '_project_ctx' });
@@ -541,13 +559,19 @@ describe('drift outcomes', () => {
     const outcome = checkAndInvalidateDrift(planDir, 'different-fingerprint-xyz');
     expect(outcome.type).toBe('drift-detected');
     expect((outcome as Extract<DriftOutcome, { type: 'drift-detected' }>).archivedTo).toBeDefined();
-    expect(existsSync((outcome as Extract<DriftOutcome, { type: 'drift-detected' }>).archivedTo)).toBe(true);
+    expect(
+      existsSync((outcome as Extract<DriftOutcome, { type: 'drift-detected' }>).archivedTo)
+    ).toBe(true);
   });
 
   it('returns yaml-corrupt when plan.yaml is not readable', () => {
     const planDir = join(tmpDir, '_ctx', 'plans', 'corrupt-yaml-test');
     mkdirSync(planDir, { recursive: true });
-    writeFileSync(join(planDir, 'plan.yaml'), Buffer.from([0x00, 0x01, 0x02, 0xff, 0xfe]), 'binary');
+    writeFileSync(
+      join(planDir, 'plan.yaml'),
+      Buffer.from([0x00, 0x01, 0x02, 0xff, 0xfe]),
+      'binary'
+    );
     const outcome = checkAndInvalidateDrift(planDir, 'abc123');
     expect(outcome.type).toBe('yaml-corrupt');
     expect((outcome as Extract<DriftOutcome, { type: 'yaml-corrupt' }>).error).toBeDefined();
@@ -557,8 +581,14 @@ describe('drift outcomes', () => {
     await createPlan(tmpDir, 'corrupt-derive-test');
     await derivePlan(tmpDir, 'corrupt-derive-test');
     const planDir = getPlanDir(tmpDir, 'corrupt-derive-test');
-    writeFileSync(join(planDir, 'plan.yaml'), Buffer.from([0x00, 0x01, 0x02, 0xff, 0xfe]), 'binary');
-    await expect(derivePlan(tmpDir, 'corrupt-derive-test')).rejects.toThrow('plan.yaml is corrupt and cannot be read');
+    writeFileSync(
+      join(planDir, 'plan.yaml'),
+      Buffer.from([0x00, 0x01, 0x02, 0xff, 0xfe]),
+      'binary'
+    );
+    await expect(derivePlan(tmpDir, 'corrupt-derive-test')).rejects.toThrow(
+      'plan.yaml is corrupt and cannot be read'
+    );
   });
 
   it('derivePlan succeeds after drift detection', async () => {
@@ -566,7 +596,7 @@ describe('drift outcomes', () => {
     await derivePlan(tmpDir, 'drift-succeed-test');
     const planDir = getPlanDir(tmpDir, 'drift-succeed-test');
     const planPath = join(planDir, 'plan.md');
-    writeFileSync(planPath, readFileSync(planPath, 'utf-8') + '\n# Modified after derive', 'utf-8');
+    writeFileSync(planPath, `${readFileSync(planPath, 'utf-8')}\n# Modified after derive`, 'utf-8');
     const yamlPath = await derivePlan(tmpDir, 'drift-succeed-test');
     expect(existsSync(yamlPath)).toBe(true);
     const historyBaseDir = join(planDir, 'history');
@@ -600,11 +630,15 @@ describe('state transitions', () => {
   });
 
   it('rejects DRAFT → HANDOFF_READY', () => {
-    expect(() => validateStateTransition('DRAFT', 'HANDOFF_READY')).toThrow('Invalid state transition');
+    expect(() => validateStateTransition('DRAFT', 'HANDOFF_READY')).toThrow(
+      'Invalid state transition'
+    );
   });
 
   it('rejects VALIDATED → HANDOFF_READY', () => {
-    expect(() => validateStateTransition('VALIDATED', 'HANDOFF_READY')).toThrow('Invalid state transition');
+    expect(() => validateStateTransition('VALIDATED', 'HANDOFF_READY')).toThrow(
+      'Invalid state transition'
+    );
   });
 
   it('readState throws on corrupt JSON', () => {
@@ -649,11 +683,15 @@ describe('state transitions', () => {
   });
 
   it('rejects DRAFT → HANDOFF_READY', () => {
-    expect(() => validateStateTransition('DRAFT', 'HANDOFF_READY')).toThrow('Invalid state transition');
+    expect(() => validateStateTransition('DRAFT', 'HANDOFF_READY')).toThrow(
+      'Invalid state transition'
+    );
   });
 
   it('rejects VALIDATED → HANDOFF_READY', () => {
-    expect(() => validateStateTransition('VALIDATED', 'HANDOFF_READY')).toThrow('Invalid state transition');
+    expect(() => validateStateTransition('VALIDATED', 'HANDOFF_READY')).toThrow(
+      'Invalid state transition'
+    );
   });
 
   it('readState throws on corrupt JSON', () => {

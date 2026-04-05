@@ -3,21 +3,18 @@ import { createCheckpoint } from '../core/checkpoint.js';
 import { resolveProjectRoot } from '../core/resolver.js';
 import type { CommandOptions, HandoffReason } from '../types/index.js';
 
-export function checkpointCommand(program: Command): void {
-  program
-    .command('checkpoint')
-    .description('Delegar a checkpoint-card para producir handoff')
-    .option('-p, --project <path>', 'Path del proyecto target')
-    .option('--plan-id <plan-id>', 'ID del plan')
-    .option('-r, --reason <reason>', 'Razón de handoff: pause, transfer, completion', 'transfer')
-    .action(async (opts: CommandOptions & { planId?: string; reason: HandoffReason }) => {
-      try {
-        const projectRoot = resolveProjectRoot(opts.project);
-        const checkpointPath = await createCheckpoint(projectRoot, opts.planId, opts.reason);
-        console.log(`Checkpoint creado: ${checkpointPath}`);
-      } catch (error) {
-        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-        process.exit(1);
-      }
-    });
+export function checkpointCommand(
+  _program: Command,
+  opts: CommandOptions & { planId?: string; reason: HandoffReason }
+): void {
+  const projectRoot = resolveProjectRoot(opts.project);
+  createCheckpoint(projectRoot, opts.planId, opts.reason).then(
+    (checkpointPath) => {
+      process.stdout.write(`Checkpoint creado: ${checkpointPath}\n`);
+    },
+    (error) => {
+      process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exit(1);
+    }
+  );
 }

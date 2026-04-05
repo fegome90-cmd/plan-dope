@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stringify } from 'yaml';
-import type { DriftOutcome } from '../types/index.js';
+import { parse, stringify } from 'yaml';
+import type { DriftOutcome, PlanYaml } from '../types/index.js';
 import { now } from './create.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
@@ -76,8 +76,12 @@ function extractPhases(lines: string[]): Array<{ name: string; description: stri
 
 function extractRisks(
   lines: string[]
-): Array<{ description: string; severity: 'low' | 'medium' | 'high' }> {
-  const risks: Array<{ description: string; severity: 'low' | 'medium' | 'high' }> = [];
+): Array<{ description: string; severity: 'low' | 'medium' | 'high'; mitigation?: string }> {
+  const risks: Array<{
+    description: string;
+    severity: 'low' | 'medium' | 'high';
+    mitigation?: string;
+  }> = [];
   let inRisks = false;
 
   for (const line of lines) {
@@ -89,7 +93,17 @@ function extractRisks(
       if (line.startsWith('## ')) break;
       const trimmed = line.trim();
       if (trimmed.startsWith('- ') && !trimmed.startsWith('<!--')) {
-        risks.push({ description: trimmed.substring(2), severity: 'medium' });
+        const content = trimmed.substring(2);
+        const pipeIdx = content.indexOf('|');
+        if (pipeIdx !== -1) {
+          risks.push({
+            description: content.substring(0, pipeIdx).trim(),
+            severity: 'medium',
+            mitigation: content.substring(pipeIdx + 1).trim() || undefined,
+          });
+        } else {
+          risks.push({ description: content, severity: 'medium' });
+        }
       }
     }
   }
@@ -205,17 +219,21 @@ export function checkAndInvalidateDrift(planDir: string, currentFingerprint: str
   let existingFingerprint: string | null = null;
   try {
     const planYamlContent = readFileSync(planYamlPath, 'utf8');
-    const hasBinaryData = [...planYamlContent].some(
-      (c) => {
-        const code = c.charCodeAt(0);
-        return (code >= 0 && code <= 8) || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
-      }
-    );
+    const hasBinaryData = [...planYamlContent].some((c) => {
+      const code = c.charCodeAt(0);
+      return (
+        (code >= 0 && code <= 8) ||
+        code === 11 ||
+        code === 12 ||
+        (code >= 14 && code <= 31) ||
+        code === 127
+      );
+    });
     if (hasBinaryData) {
       return { type: 'yaml-corrupt', error: 'file contains non-text binary data' };
     }
-    const m = planYamlContent.match(/source_md_fingerprint:\s*([0-9a-fA-F]+)\b/);
-    if (m) existingFingerprint = m[1];
+    const parsed = parse(planYamlContent);
+    existingFingerprint = (parsed?.source_md_fingerprint as string | undefined) ?? null;
   } catch (e) {
     return { type: 'yaml-corrupt', error: e instanceof Error ? e.message : String(e) };
   }
@@ -265,7 +283,7 @@ export async function derivePlan(projectRoot: string, planId?: string): Promise<
   }
   const parsed = parsePlanMarkdown(content, id);
 
-  const yamlContent: Record<string, unknown> = {
+  const yamlContent: PlanYaml = {
     plan_id: parsed.plan_id,
     source_md_path: planPath,
     source_md_fingerprint: fp,

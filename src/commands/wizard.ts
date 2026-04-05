@@ -8,67 +8,70 @@ import { reviewPlan } from '../core/review.js';
 import { validatePlan } from '../core/validate.js';
 import type { CommandOptions, HandoffReason } from '../types/index.js';
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const log = (msg: string) => process.stderr.write(`${msg}\n`);
+const out = (msg: string) => process.stdout.write(`${msg}\n`);
 
-function ask(question: string): Promise<string> {
-  return new Promise((resolve) => rl.question(question, resolve));
-}
+export function wizardCommand(_program: Command, opts: CommandOptions): void {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
 
-export function wizardCommand(program: Command): void {
-  program
-    .command('wizard')
-    .description('Orquestar interactivamente create → derive → validate → review → checkpoint')
-    .option('-p, --project <path>', 'Path del proyecto target')
-    .action(async (opts: CommandOptions) => {
-      try {
-        const projectRoot = resolveProjectRoot(opts.project);
+  const onSigint = () => {
+    log('\nWizard cancelled.');
+    rl.close();
+    process.exit(0);
+  };
+  process.on('SIGINT', onSigint);
 
-        console.log('═══════════════════════════════════════════');
-        console.log('  plan_dope wizard — pipeline interactivo');
-        console.log('═══════════════════════════════════════════\n');
+  (async () => {
+    const projectRoot = resolveProjectRoot(opts.project);
 
-        // Step 1: Create
-        console.log('[1/5] Creando plan.md...');
-        const planId = await ask('ID del plan (Enter para auto-generar): ');
-        const planPath = await createPlan(projectRoot, planId || undefined);
-        console.log(`  ✓ Plan creado: ${planPath}\n`);
+    log('═══════════════════════════════════════════');
+    log('  plan_dope wizard — pipeline interactivo');
+    log('═══════════════════════════════════════════\n');
 
-        // Step 2: Derive
-        console.log('[2/5] Derivando plan.yaml...');
-        const yamlPath = await derivePlan(projectRoot, planId || undefined);
-        console.log(`  ✓ Plan derivado: ${yamlPath}\n`);
+    log('[1/5] Creando plan.md...');
+    const planId = await ask('ID del plan (Enter para auto-generar): ');
+    const planPath = await createPlan(projectRoot, planId || undefined);
+    out(planPath);
+    log('');
 
-        // Step 3: Validate
-        console.log('[3/5] Validando plan.yaml...');
-        const reportPath = await validatePlan(projectRoot, planId || undefined);
-        console.log(`  ✓ Validación completada: ${reportPath}\n`);
+    log('[2/5] Derivando plan.yaml...');
+    const yamlPath = await derivePlan(projectRoot, planId || undefined);
+    out(yamlPath);
+    log('');
 
-        // Step 4: Review
-        console.log('[4/5] Ejecutando review...');
-        const reviewPath = await reviewPlan(projectRoot, planId || undefined);
-        console.log(`  ✓ Review completado: ${reviewPath}\n`);
+    log('[3/5] Validando plan.yaml...');
+    const reportPath = await validatePlan(projectRoot, planId || undefined);
+    out(reportPath);
+    log('');
 
-        // Step 5: Checkpoint
-        console.log('[5/5] Creando checkpoint de handoff...');
-        const reasonInput = (
-          await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')
-        ).trim();
-        const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
-        const reason = validReasons.includes(reasonInput as HandoffReason)
-          ? (reasonInput as HandoffReason)
-          : 'transfer';
-        const checkpointPath = await createCheckpoint(projectRoot, planId || undefined, reason);
-        console.log(`  ✓ Checkpoint creado: ${checkpointPath}\n`);
+    log('[4/5] Ejecutando review...');
+    const reviewPath = await reviewPlan(projectRoot, planId || undefined);
+    out(reviewPath);
+    log('');
 
-        console.log('═══════════════════════════════════════════');
-        console.log('  Pipeline completado exitosamente');
-        console.log('═══════════════════════════════════════════');
+    log('[5/5] Creando checkpoint de handoff...');
+    const reasonInput = (
+      await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')
+    ).trim();
+    const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
+    const reason = validReasons.includes(reasonInput as HandoffReason)
+      ? (reasonInput as HandoffReason)
+      : 'transfer';
+    const checkpointPath = await createCheckpoint(projectRoot, planId || undefined, reason);
+    out(checkpointPath);
+    log('');
 
-        rl.close();
-      } catch (error) {
-        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-        rl.close();
-        process.exit(1);
-      }
-    });
+    log('═══════════════════════════════════════════');
+    log('  Pipeline completado exitosamente');
+    log('═══════════════════════════════════════════');
+
+    process.off('SIGINT', onSigint);
+    rl.close();
+  })().catch((error: unknown) => {
+    log(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.off('SIGINT', onSigint);
+    rl.close();
+    process.exit(1);
+  });
 }

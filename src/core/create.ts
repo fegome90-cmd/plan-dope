@@ -72,10 +72,17 @@ export async function createPlan(projectRoot: string, planId?: string): Promise<
     throw new Error(`Plan '${id}' already exists at ${planPath}`);
   }
 
+  // Detect orphan directory: directory exists with artifacts but no plan.md
+  const statePath = join(planDir, '.state.json');
+  if (existsSync(statePath)) {
+    throw new Error(
+      `Orphan plan directory detected at ${planDir}. Remove it and retry, or use a different plan ID.`
+    );
+  }
+
   writeFileSync(planPath, PLAN_TEMPLATE(id), 'utf-8');
 
   // Write initial state metadata
-  const statePath = join(planDir, '.state.json');
   writeFileSync(
     statePath,
     JSON.stringify(

@@ -39,7 +39,9 @@ export function readState(planDir: string): StateFile {
   try {
     return JSON.parse(readFileSync(statePath, 'utf-8'));
   } catch (e) {
-    throw new Error(`Corrupt state file at ${statePath}: ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(
+      `Corrupt state file at ${statePath}: ${e instanceof Error ? e.message : String(e)}`
+    );
   }
 }
 

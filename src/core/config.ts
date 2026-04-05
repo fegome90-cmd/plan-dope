@@ -139,7 +139,7 @@ export function resolveConfig(projectRoot: string): GlobalConfig {
  */
 export function resolveArtifactsBasePath(projectRoot: string): string {
   const config = resolveConfig(projectRoot);
-  return config.artifacts_base_path || DEFAULTS.artifacts_base_path;
+  return config.artifacts_base_path ?? '_ctx';
 }
 
 /**
