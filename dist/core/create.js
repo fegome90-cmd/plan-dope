@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { getPlanDir } from './resolver.js';
 const PLAN_TEMPLATE = (id) => `# Plan: ${id}
 
@@ -28,6 +28,22 @@ const PLAN_TEMPLATE = (id) => `# Plan: ${id}
 ## Assumptions
 
 <!-- What are we assuming to be true? -->
+
+## Tags
+
+<!-- Optional: comma-separated tags for filtering, e.g. backend, refactoring, urgent -->
+
+## Assignee
+
+<!-- Optional: person or role responsible for this plan -->
+
+## Dependencies
+
+<!-- Optional: list of plan IDs this plan depends on, one per line -->
+
+## Estimated Effort
+
+<!-- Optional: human-readable estimate, e.g. 3d, 1w, 2sprints -->
 `;
 export function generateId() {
     const timestamp = Date.now().toString(36);
@@ -47,9 +63,13 @@ export async function createPlan(projectRoot, planId) {
     if (existsSync(planPath)) {
         throw new Error(`Plan '${id}' already exists at ${planPath}`);
     }
+    // Detect orphan directory: directory exists with artifacts but no plan.md
+    const statePath = join(planDir, '.state.json');
+    if (existsSync(statePath)) {
+        throw new Error(`Orphan plan directory detected at ${planDir}. Remove it and retry, or use a different plan ID.`);
+    }
     writeFileSync(planPath, PLAN_TEMPLATE(id), 'utf-8');
     // Write initial state metadata
-    const statePath = join(planDir, '.state.json');
     writeFileSync(statePath, JSON.stringify({
         plan_id: id,
         state: 'DRAFT',

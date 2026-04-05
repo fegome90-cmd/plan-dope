@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanState } from '../types/index.js';
-import { now } from './create.js';
+import { now } from './utils.js';
 
 interface StateFile {
   plan_id: string;
@@ -18,9 +18,21 @@ const VALID_TRANSITIONS: Record<PlanState, PlanState[]> = {
   HANDOFF_READY: ['DRAFT'],
 };
 
+const VALID_STATES: PlanState[] = ['DRAFT', 'DERIVED', 'VALIDATED', 'REVIEWED', 'HANDOFF_READY'];
+
+function isValidPlanState(state: unknown): state is PlanState {
+  return typeof state === 'string' && VALID_STATES.includes(state as PlanState);
+}
+
 export function validateStateTransition(from: PlanState, to: PlanState): void {
   if (from === to) return;
+  if (!isValidPlanState(from) || !isValidPlanState(to)) {
+    throw new Error(`Corrupt state file: invalid state values (from: ${from}, to: ${to})`);
+  }
   const allowed = VALID_TRANSITIONS[from];
+  if (!allowed) {
+    throw new Error(`Corrupt state file: no valid transitions defined for state '${from}'`);
+  }
   if (!allowed.includes(to)) {
     throw new Error(`Invalid state transition: ${from} → ${to}. Allowed: ${allowed.join(', ')}`);
   }
@@ -37,7 +49,18 @@ export function readState(planDir: string): StateFile {
     };
   }
   try {
-    return JSON.parse(readFileSync(statePath, 'utf-8'));
+    const parsed = JSON.parse(readFileSync(statePath, 'utf-8'));
+    // Validate structure
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid JSON structure');
+    }
+    if (!isValidPlanState(parsed.state)) {
+      throw new Error(`Invalid state value: ${parsed.state}`);
+    }
+    if (typeof parsed.plan_id !== 'string') {
+      throw new Error('Missing or invalid plan_id');
+    }
+    return parsed as StateFile;
   } catch (e) {
     throw new Error(
       `Corrupt state file at ${statePath}: ${e instanceof Error ? e.message : String(e)}`

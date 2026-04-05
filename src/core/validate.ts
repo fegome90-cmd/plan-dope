@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
-import { now } from './create.js';
+import { now } from './utils.js';
 import { fingerprint } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';

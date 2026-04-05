@@ -10,7 +10,8 @@ export function validateCommand(
   const projectRoot = resolveProjectRoot(opts.project);
   validatePlan(projectRoot, opts.planId).then(
     (reportPath) => {
-      process.stdout.write(`Reporte de validación: ${reportPath}\n`);
+      process.stdout.write(`${reportPath}\n`);
+      process.stderr.write(`Reporte de validación: ${reportPath}\n`);
     },
     (error) => {
       process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);

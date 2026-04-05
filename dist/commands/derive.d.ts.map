@@ -1,1 +1,1 @@
-{"version":3,"file":"derive.d.ts","sourceRoot":"","sources":["../../src/commands/derive.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAKpC,wBAAgB,aAAa,CAAC,OAAO,EAAE,OAAO,GAAG,IAAI,CAgBpD"}
+{"version":3,"file":"derive.d.ts","sourceRoot":"","sources":["../../src/commands/derive.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAGzC,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,mBAAmB,CAAC;AAExD,wBAAgB,aAAa,CAAC,QAAQ,EAAE,OAAO,EAAE,IAAI,EAAE,cAAc,GAAG;IAAE,MAAM,CAAC,EAAE,MAAM,CAAA;CAAE,GAAG,IAAI,CAYjG"}

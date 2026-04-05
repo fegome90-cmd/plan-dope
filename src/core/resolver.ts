@@ -44,6 +44,10 @@ export function getPlansDir(projectRoot: string): string {
   return join(projectRoot, '_ctx', 'plans');
 }
 
+const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
+
+const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
+
 export function findPlanId(projectRoot: string, planId?: string): string {
   if (planId) {
     const dir = getPlanDir(projectRoot, planId);
@@ -55,18 +59,39 @@ export function findPlanId(projectRoot: string, planId?: string): string {
 
   const plansDir = getPlansDir(projectRoot);
   if (!existsSync(plansDir)) {
-    throw new Error('No plans found. Run `plan create` first.');
+    throw new Error(NO_PLANS_FOUND);
   }
 
   const dirs = readdirSync(plansDir).filter((d) => existsSync(join(plansDir, d, 'plan.md')));
 
   if (dirs.length === 0) {
-    throw new Error('No plans found. Run `plan create` first.');
+    throw new Error(NO_PLANS_FOUND);
   }
 
   const latest = dirs.sort().pop();
   if (!latest) {
-    throw new Error('No plans found. Run `plan create` first.');
+    throw new Error(NO_PLANS_FOUND);
+  }
+
+  return latest;
+}
+    return planId;
+  }
+
+  const plansDir = getPlansDir(projectRoot);
+  if (!existsSync(plansDir)) {
+    throw new Error(NO_PLANS_FOUND);
+  }
+
+  const dirs = readdirSync(plansDir).filter((d) => existsSync(join(plansDir, d, 'plan.md')));
+
+  if (dirs.length === 0) {
+    throw new Error(NO_PLANS_FOUND);
+  }
+
+  const latest = dirs.sort().pop();
+  if (!latest) {
+    throw new Error(NO_PLANS_FOUND);
   }
 
   return latest;

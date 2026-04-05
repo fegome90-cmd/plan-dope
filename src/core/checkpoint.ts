@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import type { HandoffReason } from '../types/index.js';
-import { now } from './create.js';
+import { now } from './utils.js';
 import { fingerprint } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
@@ -44,7 +44,10 @@ export async function createCheckpoint(
   const yamlContent = readFileSync(yamlPath, 'utf-8');
   const yamlParsed = parse(yamlContent);
   const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
-  if (storedFp && storedFp !== currentFp) {
+  if (!storedFp) {
+    throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
+  }
+  if (storedFp !== currentFp) {
     throw new Error(
       `fingerprint mismatch: plan.md (${currentFp}) does not match plan.yaml source fingerprint (${storedFp}). Re-run \`plan derive\`.`
     );

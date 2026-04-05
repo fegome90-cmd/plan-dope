@@ -7,7 +7,8 @@ export function deriveCommand(_program: Command, opts: CommandOptions & { planId
   const projectRoot = resolveProjectRoot(opts.project);
   derivePlan(projectRoot, opts.planId).then(
     (yamlPath) => {
-      process.stdout.write(`Plan derivado: ${yamlPath}\n`);
+      process.stdout.write(`${yamlPath}\n`);
+      process.stderr.write(`Plan derivado: ${yamlPath}\n`);
     },
     (error) => {
       process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);

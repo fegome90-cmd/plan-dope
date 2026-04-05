@@ -12,7 +12,7 @@ const log = (msg: string) => process.stderr.write(`${msg}\n`);
 const out = (msg: string) => process.stdout.write(`${msg}\n`);
 
 export function wizardCommand(_program: Command, opts: CommandOptions): void {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
   const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
 
   const onSigint = () => {
@@ -30,10 +30,18 @@ export function wizardCommand(_program: Command, opts: CommandOptions): void {
     log('═══════════════════════════════════════════\n');
 
     log('[1/5] Creando plan.md...');
-    const planId = await ask('ID del plan (Enter para auto-generar): ');
+    let planId = await ask('ID del plan (Enter para auto-generar): ');
     const planPath = await createPlan(projectRoot, planId || undefined);
     out(planPath);
     log('');
+
+    // If planId was empty, extract the generated ID from the returned path
+    if (!planId) {
+      const match = planPath.match(/plans[/\\]([^/\\]+)[/\\]plan\.md$/);
+      if (match) {
+        planId = match[1];
+      }
+    }
 
     log('[2/5] Derivando plan.yaml...');
     const yamlPath = await derivePlan(projectRoot, planId || undefined);

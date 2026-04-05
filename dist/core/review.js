@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { stringify, parse } from 'yaml';
-import { findPlanId, getPlanDir } from './resolver.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse, stringify } from 'yaml';
 import { now } from './create.js';
 import { fingerprint } from './derive.js';
+import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 export async function reviewPlan(projectRoot, planId) {
     const id = findPlanId(projectRoot, planId);
@@ -21,6 +21,25 @@ export async function reviewPlan(projectRoot, planId) {
     const validationReport = parse(validationContent);
     const planContent = readFileSync(planPath, 'utf-8');
     const planFp = fingerprint(planContent);
+    // Verify fingerprint coherency: plan.md must match the fingerprint stored in plan.yaml
+    const yamlContent = readFileSync(yamlPath, 'utf-8');
+    const yamlParsed = parse(yamlContent);
+    const storedFingerprint = yamlParsed?.source_md_fingerprint;
+    if (!storedFingerprint) {
+        throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
+    }
+    if (storedFingerprint !== planFp) {
+        throw new Error(`fingerprint mismatch: plan.md (${planFp}) does not match plan.yaml source fingerprint (${storedFingerprint}). Re-run \`plan derive\`.`);
+    }
+    // Verify validation-report corresponds to current plan.yaml
+    const yamlFp = fingerprint(yamlContent);
+    const validationYamlFp = validationReport.plan_yaml_fingerprint;
+    if (!validationYamlFp) {
+        throw new Error(`validation-report.yaml missing plan_yaml_fingerprint; re-run \`plan validate\`.`);
+    }
+    if (validationYamlFp !== yamlFp) {
+        throw new Error(`validation-report.yaml is stale (fingerprint ${validationYamlFp}) and does not match current plan.yaml (${yamlFp}). Re-run \`plan validate\`.`);
+    }
     const runId = `review-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const findings = [];
     // If validation failed, that's a critical finding
@@ -42,7 +61,8 @@ export async function reviewPlan(projectRoot, planId) {
         });
     }
     // Structural review checks
-    if (!planContent.includes('## Purpose') || planContent.includes('<!-- Describe what this plan is about -->')) {
+    if (!planContent.includes('## Purpose') ||
+        planContent.includes('<!-- Describe what this plan is about -->')) {
         findings.push({
             severity: 'warning',
             category: 'completeness',
@@ -58,7 +78,11 @@ export async function reviewPlan(projectRoot, planId) {
     }
     // Determine verdict
     const hasCritical = findings.some((f) => f.severity === 'critical');
-    const verdict = hasCritical ? 'FAIL' : findings.length > 0 ? 'PASS_WITH_NOTES' : 'PASS';
+    const verdict = hasCritical
+        ? 'FAIL'
+        : findings.length > 0
+            ? 'PASS_WITH_NOTES'
+            : 'PASS';
     const report = {
         run_id: runId,
         plan_id: id,

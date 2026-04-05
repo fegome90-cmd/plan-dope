@@ -80,9 +80,7 @@ function generateCompletion(shell: string, program: Command): string | null {
   const cmdNames = commands.map((c) => c.name()).join(' ');
   const cmdList = commands.map((c) => c.name());
   const allOptions = [
-    ...new Set(
-      commands.flatMap((c) => c.options.map((o) => o.long || o.short)).filter(Boolean)
-    ),
+    ...new Set(commands.flatMap((c) => c.options.map((o) => o.long || o.short)).filter(Boolean)),
   ].join(' ');
 
   if (shell === 'bash') {
@@ -139,12 +137,15 @@ _plan_dope_completion
 
   if (shell === 'fish') {
     return `# Fish shell completion for plan_dope
-${commands.map((name) => `complete -c plan -n "__fish_use_subcommand" -a ${name}`).join('\n')}
 ${commands
-  .flatMap(() => [
-    `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames.replace(/ /g, ' ')}" -l project -d "Path del proyecto target"`,
-    `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames.replace(/ /g, ' ')}" -l plan-id -d "ID del plan"`,
-    `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames.replace(/ /g, ' ')}" -l id -d "ID del plan"`,
+  .map((c) => c.name())
+  .map((name) => `complete -c plan -n "__fish_use_subcommand" -a ${name}`)
+  .join('\n')}
+${commands
+  .flatMap((c) => [
+    `complete -c plan -n "__fish_seen_subcommand_from ${c.name()}" -l project -d "Path del proyecto target"`,
+    `complete -c plan -n "__fish_seen_subcommand_from ${c.name()}" -l plan-id -d "ID del plan"`,
+    `complete -c plan -n "__fish_seen_subcommand_from ${c.name()}" -l id -d "ID del plan"`,
     `complete -c plan -n "__fish_seen_subcommand_from checkpoint" -l reason -d "Razón de handoff" -a "pause transfer completion"`,
   ])
   .join('\n')}
