@@ -1,5 +1,6 @@
-import { existsSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { isGitRepo } from './git.js';
 export function resolveProjectRoot(projectPath) {
     if (projectPath) {
         const resolved = projectPath.startsWith('~')
@@ -8,12 +9,18 @@ export function resolveProjectRoot(projectPath) {
         if (!existsSync(resolved)) {
             throw new Error(`Project path does not exist: ${resolved}`);
         }
+        if (!isGitRepo(resolved)) {
+            throw new Error(`Not a git repository: ${resolved}. Run plan_dope from within a git repo or use --project <path> to a valid repo.`);
+        }
         return resolved;
     }
     // Use cwd
     const cwd = process.cwd();
     if (!existsSync(cwd)) {
         throw new Error('Current working directory does not exist');
+    }
+    if (!isGitRepo(cwd)) {
+        throw new Error(`Not a git repository: ${cwd}. Run plan_dope from within a git repo or use --project <path> to a valid repo.`);
     }
     return cwd;
 }
@@ -39,6 +46,10 @@ export function findPlanId(projectRoot, planId) {
     if (dirs.length === 0) {
         throw new Error('No plans found. Run `plan create` first.');
     }
-    return dirs.sort().pop();
+    const latest = dirs.sort().pop();
+    if (!latest) {
+        throw new Error('No plans found. Run `plan create` first.');
+    }
+    return latest;
 }
 //# sourceMappingURL=resolver.js.map

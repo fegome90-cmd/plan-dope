@@ -30,7 +30,12 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   const yamlContent = readFileSync(yamlPath, 'utf-8');
   const yamlParsed = parse(yamlContent);
   const storedFingerprint = yamlParsed?.source_md_fingerprint as string | undefined;
-  if (storedFingerprint && storedFingerprint !== planFp) {
+  if (!storedFingerprint) {
+    throw new Error(
+      `plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`
+    );
+  }
+  if (storedFingerprint !== planFp) {
     throw new Error(
       `fingerprint mismatch: plan.md (${planFp}) does not match plan.yaml source fingerprint (${storedFingerprint}). Re-run \`plan derive\`.`
     );
@@ -39,7 +44,12 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   // Verify validation-report corresponds to current plan.yaml
   const yamlFp = fingerprint(yamlContent);
   const validationYamlFp = validationReport.plan_yaml_fingerprint as string | undefined;
-  if (validationYamlFp && validationYamlFp !== yamlFp) {
+  if (!validationYamlFp) {
+    throw new Error(
+      `validation-report.yaml missing plan_yaml_fingerprint; re-run \`plan validate\`.`
+    );
+  }
+  if (validationYamlFp !== yamlFp) {
     throw new Error(
       `validation-report.yaml is stale (fingerprint ${validationYamlFp}) and does not match current plan.yaml (${yamlFp}). Re-run \`plan validate\`.`
     );

@@ -10,7 +10,8 @@ export function checkpointCommand(
   const projectRoot = resolveProjectRoot(opts.project);
   createCheckpoint(projectRoot, opts.planId, opts.reason).then(
     (checkpointPath) => {
-      process.stdout.write(`Checkpoint creado: ${checkpointPath}\n`);
+      process.stdout.write(`${checkpointPath}\n`);
+      process.stderr.write(`Checkpoint creado: ${checkpointPath}\n`);
     },
     (error) => {
       process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);

@@ -18,6 +18,14 @@ export interface PlanYaml {
     phases: Phase[];
     risks: Risk[];
     validation_criteria: string[];
+    /** Free-form tags for filtering and search */
+    tags?: string[];
+    /** Person or role responsible for this plan */
+    assignee?: string;
+    /** Plan IDs this plan depends on */
+    dependencies?: string[];
+    /** Human-readable effort estimate (e.g. "3d", "1w", "2sprints") */
+    estimated_effort?: string;
 }
 export interface Phase {
     name: string;
@@ -73,4 +81,15 @@ export interface CliConfig {
 export interface CommandOptions {
     project?: string;
 }
+export type DriftOutcome = {
+    type: 'no-drift';
+} | {
+    type: 'no-existing-yaml';
+} | {
+    type: 'drift-detected';
+    archivedTo: string;
+} | {
+    type: 'yaml-corrupt';
+    error: string;
+};
 //# sourceMappingURL=index.d.ts.map

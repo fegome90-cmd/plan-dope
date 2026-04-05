@@ -7,7 +7,8 @@ export function reviewCommand(_program: Command, opts: CommandOptions & { planId
   const projectRoot = resolveProjectRoot(opts.project);
   reviewPlan(projectRoot, opts.planId).then(
     (reportPath) => {
-      process.stdout.write(`Reporte de review: ${reportPath}\n`);
+      process.stdout.write(`${reportPath}\n`);
+      process.stderr.write(`Reporte de review: ${reportPath}\n`);
     },
     (error) => {
       process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);

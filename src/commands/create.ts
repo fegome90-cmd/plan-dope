@@ -7,7 +7,8 @@ export function createCommand(_program: Command, opts: CommandOptions & { id?: s
   const projectRoot = resolveProjectRoot(opts.project);
   createPlan(projectRoot, opts.id).then(
     (planPath) => {
-      process.stdout.write(`Plan creado: ${planPath}\n`);
+      process.stdout.write(`${planPath}\n`);
+      process.stderr.write(`Plan creado: ${planPath}\n`);
     },
     (error) => {
       process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
