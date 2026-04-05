@@ -1,5 +1,5 @@
-import { execSync } from 'child_process';
-import { statSync } from 'fs';
+import { execSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 
 export function isGitRepo(root: string): boolean {
   try {
@@ -12,6 +12,8 @@ export function isGitRepo(root: string): boolean {
     const result = execSync('git rev-parse --is-inside-work-tree', {
       cwd: root,
       stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+      maxBuffer: 1024,
     })
       .toString()
       .trim();

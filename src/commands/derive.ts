@@ -1,7 +1,7 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import { derivePlan } from '../core/derive.js';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions } from '../types/index.js';
+import type { CommandOptions } from '../types/index.js';
 
 export function deriveCommand(program: Command): void {
   program

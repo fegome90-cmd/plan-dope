@@ -1,7 +1,7 @@
-import { Command } from 'commander';
-import { reviewPlan } from '../core/review.js';
+import type { Command } from 'commander';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions } from '../types/index.js';
+import { reviewPlan } from '../core/review.js';
+import type { CommandOptions } from '../types/index.js';
 
 export function reviewCommand(program: Command): void {
   program

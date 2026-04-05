@@ -1,7 +1,7 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import { createCheckpoint } from '../core/checkpoint.js';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions, HandoffReason } from '../types/index.js';
+import type { CommandOptions, HandoffReason } from '../types/index.js';
 
 export function checkpointCommand(program: Command): void {
   program

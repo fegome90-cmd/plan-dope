@@ -1,10 +1,10 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import path from 'path';
-import { join } from 'path';
-import { createHash } from 'crypto';
-import { stringify, parse } from 'yaml';
-import { findPlanId, getPlanDir } from './resolver.js';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { stringify } from 'yaml';
+import type { DriftOutcome } from '../types/index.js';
 import { now } from './create.js';
+import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 
 export function fingerprint(content: string): string {
@@ -18,8 +18,22 @@ function parsePlanMarkdown(content: string, id: string) {
   const phases = extractPhases(lines);
   const risks = extractRisks(lines);
   const validation_criteria = extractList(lines, 'Validation Criteria');
+  const tags = extractTags(lines);
+  const assignee = extractAssignee(lines);
+  const dependencies = extractDependencies(lines);
+  const estimated_effort = extractEstimatedEffort(lines);
 
-  return { plan_id: id, scope, phases, risks, validation_criteria };
+  return {
+    plan_id: id,
+    scope,
+    phases,
+    risks,
+    validation_criteria,
+    tags,
+    assignee,
+    dependencies,
+    estimated_effort,
+  };
 }
 
 function extractSection(lines: string[], heading: string): string | null {
@@ -52,7 +66,7 @@ function extractPhases(lines: string[]): Array<{ name: string; description: stri
         const name = line.replace('### ', '').trim();
         phases.push({ name, description: '' });
       } else if (phases.length > 0 && line.trim() && !line.trim().startsWith('<!--')) {
-        phases[phases.length - 1].description += line.trim() + ' ';
+        phases[phases.length - 1].description += `${line.trim()} `;
       }
     }
   }
@@ -60,7 +74,9 @@ function extractPhases(lines: string[]): Array<{ name: string; description: stri
   return phases.map((p) => ({ ...p, description: p.description.trim() }));
 }
 
-function extractRisks(lines: string[]): Array<{ description: string; severity: 'low' | 'medium' | 'high' }> {
+function extractRisks(
+  lines: string[]
+): Array<{ description: string; severity: 'low' | 'medium' | 'high' }> {
   const risks: Array<{ description: string; severity: 'low' | 'medium' | 'high' }> = [];
   let inRisks = false;
 
@@ -102,6 +118,136 @@ function extractList(lines: string[], heading: string): string[] {
   return items;
 }
 
+/**
+ * Extract tags from the ## Tags section.
+ * Supports both comma-separated on a single line and bullet lists.
+ */
+function extractTags(lines: string[]): string[] | undefined {
+  const idx = lines.findIndex((l) => l.startsWith('## Tags'));
+  if (idx === -1) return undefined;
+
+  const tagLines: string[] = [];
+  for (let i = idx + 1; i < lines.length; i++) {
+    if (lines[i].startsWith('## ')) break;
+    const trimmed = lines[i].trim();
+    if (trimmed && !trimmed.startsWith('<!--')) {
+      tagLines.push(trimmed);
+    }
+  }
+
+  if (tagLines.length === 0) return undefined;
+
+  const raw = tagLines.join(', ');
+  const tags = raw
+    .split(/[,\n]/)
+    .map((t) => t.replace(/^- /, '').trim())
+    .filter(Boolean);
+
+  return tags.length > 0 ? tags : undefined;
+}
+
+/**
+ * Extract assignee from the ## Assignee section.
+ */
+function extractAssignee(lines: string[]): string | undefined {
+  const idx = lines.findIndex((l) => l.startsWith('## Assignee'));
+  if (idx === -1) return undefined;
+
+  for (let i = idx + 1; i < lines.length; i++) {
+    if (lines[i].startsWith('## ')) break;
+    const trimmed = lines[i].trim();
+    if (trimmed && !trimmed.startsWith('<!--')) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract dependencies from the ## Dependencies section.
+ * Each line should be a plan ID (bullet list or plain text).
+ */
+function extractDependencies(lines: string[]): string[] | undefined {
+  const deps = extractList(lines, 'Dependencies');
+  return deps.length > 0 ? deps : undefined;
+}
+
+/**
+ * Extract estimated effort from the ## Estimated Effort section.
+ * Returns the first non-comment line as a string.
+ */
+function extractEstimatedEffort(lines: string[]): string | undefined {
+  const idx = lines.findIndex((l) => l.startsWith('## Estimated Effort'));
+  if (idx === -1) return undefined;
+
+  for (let i = idx + 1; i < lines.length; i++) {
+    if (lines[i].startsWith('## ')) break;
+    const trimmed = lines[i].trim();
+    if (trimmed && !trimmed.startsWith('<!--')) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Drift detection and invalidation:
+ * - If plan.yaml exists and its source_md_fingerprint differs from currentFingerprint,
+ *   archive derivatives to history and reset state to DRAFT.
+ * - Returns a structured DriftOutcome instead of void/console.warn.
+ */
+export function checkAndInvalidateDrift(planDir: string, currentFingerprint: string): DriftOutcome {
+  const planYamlPath = join(planDir, 'plan.yaml');
+  if (!existsSync(planYamlPath)) return { type: 'no-existing-yaml' };
+
+  let existingFingerprint: string | null = null;
+  try {
+    const planYamlContent = readFileSync(planYamlPath, 'utf8');
+    const hasBinaryData = [...planYamlContent].some(
+      (c) => {
+        const code = c.charCodeAt(0);
+        return (code >= 0 && code <= 8) || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
+      }
+    );
+    if (hasBinaryData) {
+      return { type: 'yaml-corrupt', error: 'file contains non-text binary data' };
+    }
+    const m = planYamlContent.match(/source_md_fingerprint:\s*([0-9a-fA-F]+)\b/);
+    if (m) existingFingerprint = m[1];
+  } catch (e) {
+    return { type: 'yaml-corrupt', error: e instanceof Error ? e.message : String(e) };
+  }
+
+  if (existingFingerprint && existingFingerprint !== currentFingerprint) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T').join('_');
+    const historyDir = join(planDir, 'history', timestamp);
+    mkdirSync(historyDir, { recursive: true });
+
+    const artifacts = [
+      { src: planYamlPath, dest: join(historyDir, 'plan.yaml') },
+      {
+        src: join(planDir, 'validation-report.yaml'),
+        dest: join(historyDir, 'validation-report.yaml'),
+      },
+      { src: join(planDir, 'review-report.md'), dest: join(historyDir, 'review-report.md') },
+    ];
+
+    artifacts.forEach(({ src, dest }) => {
+      if (existsSync(src)) {
+        const data = readFileSync(src);
+        writeFileSync(dest, data);
+      }
+    });
+
+    updateState(planDir, 'DRAFT');
+    return { type: 'drift-detected', archivedTo: historyDir };
+  }
+
+  return { type: 'no-drift' };
+}
+
 export async function derivePlan(projectRoot: string, planId?: string): Promise<string> {
   const id = findPlanId(projectRoot, planId);
   const planDir = getPlanDir(projectRoot, id);
@@ -113,11 +259,13 @@ export async function derivePlan(projectRoot: string, planId?: string): Promise<
 
   const content = readFileSync(planPath, 'utf-8');
   const fp = fingerprint(content);
-  // Drift check before creating new plan.yaml
-  checkAndInvalidateDrift(planDir, fp);
+  const driftOutcome = checkAndInvalidateDrift(planDir, fp);
+  if (driftOutcome.type === 'yaml-corrupt') {
+    throw new Error(`plan.yaml is corrupt and cannot be read: ${driftOutcome.error}`);
+  }
   const parsed = parsePlanMarkdown(content, id);
 
-  const yamlContent = {
+  const yamlContent: Record<string, unknown> = {
     plan_id: parsed.plan_id,
     source_md_path: planPath,
     source_md_fingerprint: fp,
@@ -128,61 +276,16 @@ export async function derivePlan(projectRoot: string, planId?: string): Promise<
     validation_criteria: parsed.validation_criteria,
   };
 
+  // Only include optional fields when they have values
+  if (parsed.tags) yamlContent.tags = parsed.tags;
+  if (parsed.assignee) yamlContent.assignee = parsed.assignee;
+  if (parsed.dependencies) yamlContent.dependencies = parsed.dependencies;
+  if (parsed.estimated_effort) yamlContent.estimated_effort = parsed.estimated_effort;
+
   const yamlPath = join(planDir, 'plan.yaml');
   writeFileSync(yamlPath, stringify(yamlContent), 'utf-8');
 
   updateState(planDir, 'DERIVED');
 
   return yamlPath;
-}
-// Optional helper to archive artifacts when drift is detected
-function archiveArtifact(sourcePath: string, destPath: string): void {
-  if (existsSync(sourcePath)) {
-    writeFileSync(destPath, readFileSync(sourcePath), 'utf-8');
-  }
-}
-
-// updateState is assumed to be defined elsewhere in the runtime
-
-/**
- * Drift detection and invalidation:
- * - If plan.yaml exists and its source_md_fingerprint differs from currentFingerprint,
- *   archive derivatives to history and reset state to DRAFT.
- */
-function checkAndInvalidateDrift(planDir: string, currentFingerprint: string): void {
-  const planYamlPath = path.join(planDir, 'plan.yaml');
-  if (!existsSync(planYamlPath)) return;
-
-  let existingFingerprint: string | null = null;
-  try {
-    const planYamlContent = readFileSync(planYamlPath, 'utf8');
-    const m = planYamlContent.match(/source_md_fingerprint:\s*([0-9a-fA-F]+)\b/);
-    if (m) existingFingerprint = m[1];
-  } catch {
-    // If parsing fails, skip drift handling
-    return;
-  }
-
-  if (existingFingerprint && existingFingerprint !== currentFingerprint) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T').join('_');
-    const historyDir = path.join(planDir, 'history', timestamp);
-    mkdirSync(historyDir, { recursive: true });
-
-    const artifacts = [
-      { src: planYamlPath, dest: path.join(historyDir, 'plan.yaml') },
-      { src: path.join(planDir, 'validation-report.yaml'), dest: path.join(historyDir, 'validation-report.yaml') },
-      { src: path.join(planDir, 'review-report.md'), dest: path.join(historyDir, 'review-report.md') },
-    ];
-
-    artifacts.forEach(({ src, dest }) => {
-      if (existsSync(src)) {
-        const data = readFileSync(src);
-        writeFileSync(dest, data);
-      }
-    });
-
-    // Reset to DRAFT state for new derivation
-    updateState(planDir, 'DRAFT');
-    console.warn('Plan source changed, invalidating derivatives. Previous artifacts archived to history/.');
-  }
 }

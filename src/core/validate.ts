@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { stringify, parse } from 'yaml';
-import { findPlanId, getPlanDir } from './resolver.js';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse, stringify } from 'yaml';
 import { now } from './create.js';
 import { fingerprint } from './derive.js';
+import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 
 export async function validatePlan(projectRoot: string, planId?: string): Promise<string> {
@@ -23,7 +23,16 @@ export async function validatePlan(projectRoot: string, planId?: string): Promis
   const warnings: string[] = [];
 
   // Validate required fields
-  const requiredFields = ['plan_id', 'source_md_path', 'source_md_fingerprint', 'derived_at', 'scope', 'phases', 'risks', 'validation_criteria'];
+  const requiredFields = [
+    'plan_id',
+    'source_md_path',
+    'source_md_fingerprint',
+    'derived_at',
+    'scope',
+    'phases',
+    'risks',
+    'validation_criteria',
+  ];
   for (const field of requiredFields) {
     if (!(field in parsed)) {
       errors.push({ field, message: `Missing required field: ${field}` });
@@ -53,7 +62,10 @@ export async function validatePlan(projectRoot: string, planId?: string): Promis
         errors.push({ field: `risks[${i}]`, message: 'Risk missing description' });
       }
       if (risk.severity && !['low', 'medium', 'high'].includes(risk.severity)) {
-        errors.push({ field: `risks[${i}].severity`, message: `Invalid severity: ${risk.severity}` });
+        errors.push({
+          field: `risks[${i}].severity`,
+          message: `Invalid severity: ${risk.severity}`,
+        });
       }
     }
   } else {

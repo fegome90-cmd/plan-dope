@@ -1,9 +1,11 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { findPlanId, getPlanDir } from './resolver.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse } from 'yaml';
+import type { HandoffReason } from '../types/index.js';
+import { fingerprint } from './derive.js';
 import { now } from './create.js';
+import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
-import { HandoffReason } from '../types/index.js';
 
 export async function createCheckpoint(
   projectRoot: string,
@@ -12,16 +14,20 @@ export async function createCheckpoint(
 ): Promise<string> {
   const id = findPlanId(projectRoot, planId);
   const planDir = getPlanDir(projectRoot, id);
-  // Runtime validation for HandoffReason
+  // Defensive: protects against unsafe callers using `as HandoffReason`
   const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
   if (!validReasons.includes(reason)) {
-    throw new Error(`Invalid handoff reason: ${reason}. Must be one of: pause, transfer, completion`);
+    throw new Error(
+      `Invalid handoff reason: ${reason}. Must be one of: pause, transfer, completion`
+    );
   }
 
   // Check plan is in REVIEWED state
   const state = readState(planDir);
   if (state.state !== 'REVIEWED') {
-    throw new Error(`Cannot create checkpoint: plan is in state '${state.state}', must be 'REVIEWED'`);
+    throw new Error(
+      `Cannot create checkpoint: plan is in state '${state.state}', must be 'REVIEWED'`
+    );
   }
 
   const planPath = join(planDir, 'plan.md');
@@ -30,7 +36,20 @@ export async function createCheckpoint(
   if (!existsSync(planPath)) throw new Error(`plan.md not found`);
   if (!existsSync(reviewPath)) throw new Error(`review-report.md not found`);
 
+  // Verify fingerprint coherency before creating checkpoint
   const planContent = readFileSync(planPath, 'utf-8');
+  const currentFp = fingerprint(planContent);
+  const yamlPath = join(planDir, 'plan.yaml');
+  if (!existsSync(yamlPath)) throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
+  const yamlContent = readFileSync(yamlPath, 'utf-8');
+  const yamlParsed = parse(yamlContent);
+  const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
+  if (storedFp && storedFp !== currentFp) {
+    throw new Error(
+      `fingerprint mismatch: plan.md (${currentFp}) does not match plan.yaml source fingerprint (${storedFp}). Re-run \`plan derive\`.`
+    );
+  }
+
   const reviewContent = readFileSync(reviewPath, 'utf-8');
   // Read validation report
   const validationPath = join(planDir, 'validation-report.yaml');
@@ -76,9 +95,6 @@ ${pendingErrors.length > 0 ? pendingErrors.map((e) => `- ${e}`).join('\n') : 'No
 ## Next Agent Prompt
  ${nextAgentPrompt}
  
-## Checkpoint Name
-${id}
-
 ## Current Plan
 ${planPath}
 

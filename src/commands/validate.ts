@@ -1,7 +1,7 @@
-import { Command } from 'commander';
-import { validatePlan } from '../core/validate.js';
+import type { Command } from 'commander';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions } from '../types/index.js';
+import { validatePlan } from '../core/validate.js';
+import type { CommandOptions } from '../types/index.js';
 
 export function validateCommand(program: Command): void {
   program

@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { isGitRepo } from './git.js';
 
 export function resolveProjectRoot(projectPath?: string): string {
@@ -58,13 +58,16 @@ export function findPlanId(projectRoot: string, planId?: string): string {
     throw new Error('No plans found. Run `plan create` first.');
   }
 
-  const dirs = readdirSync(plansDir).filter((d) =>
-    existsSync(join(plansDir, d, 'plan.md'))
-  );
+  const dirs = readdirSync(plansDir).filter((d) => existsSync(join(plansDir, d, 'plan.md')));
 
   if (dirs.length === 0) {
     throw new Error('No plans found. Run `plan create` first.');
   }
 
-  return dirs.sort().pop()!;
+  const latest = dirs.sort().pop();
+  if (!latest) {
+    throw new Error('No plans found. Run `plan create` first.');
+  }
+
+  return latest;
 }

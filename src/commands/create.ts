@@ -1,7 +1,7 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 import { createPlan } from '../core/create.js';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions } from '../types/index.js';
+import type { CommandOptions } from '../types/index.js';
 
 export function createCommand(program: Command): void {
   program

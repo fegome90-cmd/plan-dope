@@ -1,12 +1,12 @@
-import { Command } from 'commander';
+import * as readline from 'node:readline';
+import type { Command } from 'commander';
+import { createCheckpoint } from '../core/checkpoint.js';
 import { createPlan } from '../core/create.js';
 import { derivePlan } from '../core/derive.js';
-import { validatePlan } from '../core/validate.js';
-import { reviewPlan } from '../core/review.js';
-import { createCheckpoint } from '../core/checkpoint.js';
 import { resolveProjectRoot } from '../core/resolver.js';
-import { CommandOptions, HandoffReason } from '../types/index.js';
-import * as readline from 'readline';
+import { reviewPlan } from '../core/review.js';
+import { validatePlan } from '../core/validate.js';
+import type { CommandOptions, HandoffReason } from '../types/index.js';
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -50,7 +50,9 @@ export function wizardCommand(program: Command): void {
 
         // Step 5: Checkpoint
         console.log('[5/5] Creando checkpoint de handoff...');
-        const reasonInput = (await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')).trim();
+        const reasonInput = (
+          await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')
+        ).trim();
         const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
         const reason = validReasons.includes(reasonInput as HandoffReason)
           ? (reasonInput as HandoffReason)

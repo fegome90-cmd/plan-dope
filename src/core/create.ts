@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { PlanState } from '../types/index.js';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { PlanState } from '../types/index.js';
 import { getPlanDir } from './resolver.js';
 
 const PLAN_TEMPLATE = (id: string) => `# Plan: ${id}
@@ -30,6 +30,22 @@ const PLAN_TEMPLATE = (id: string) => `# Plan: ${id}
 ## Assumptions
 
 <!-- What are we assuming to be true? -->
+
+## Tags
+
+<!-- Optional: comma-separated tags for filtering, e.g. backend, refactoring, urgent -->
+
+## Assignee
+
+<!-- Optional: person or role responsible for this plan -->
+
+## Dependencies
+
+<!-- Optional: list of plan IDs this plan depends on, one per line -->
+
+## Estimated Effort
+
+<!-- Optional: human-readable estimate, e.g. 3d, 1w, 2sprints -->
 `;
 
 export function generateId(): string {
@@ -60,12 +76,20 @@ export async function createPlan(projectRoot: string, planId?: string): Promise<
 
   // Write initial state metadata
   const statePath = join(planDir, '.state.json');
-  writeFileSync(statePath, JSON.stringify({
-    plan_id: id,
-    state: 'DRAFT' as PlanState,
-    created_at: now(),
-    updated_at: now(),
-  }, null, 2), 'utf-8');
+  writeFileSync(
+    statePath,
+    JSON.stringify(
+      {
+        plan_id: id,
+        state: 'DRAFT' as PlanState,
+        created_at: now(),
+        updated_at: now(),
+      },
+      null,
+      2
+    ),
+    'utf-8'
+  );
 
   return planPath;
 }

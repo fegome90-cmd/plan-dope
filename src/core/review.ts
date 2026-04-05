@@ -1,11 +1,11 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { stringify, parse } from 'yaml';
-import { findPlanId, getPlanDir } from './resolver.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse, stringify } from 'yaml';
+import type { Finding, ReviewVerdict } from '../types/index.js';
 import { now } from './create.js';
 import { fingerprint } from './derive.js';
+import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
-import { ReviewVerdict, Finding } from '../types/index.js';
 
 export async function reviewPlan(projectRoot: string, planId?: string): Promise<string> {
   const id = findPlanId(projectRoot, planId);
@@ -17,13 +17,24 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
 
   if (!existsSync(planPath)) throw new Error(`plan.md not found for plan '${id}'`);
   if (!existsSync(yamlPath)) throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
-  if (!existsSync(validationPath)) throw new Error(`validation-report.yaml not found. Run \`plan validate\` first.`);
+  if (!existsSync(validationPath))
+    throw new Error(`validation-report.yaml not found. Run \`plan validate\` first.`);
 
   const validationContent = readFileSync(validationPath, 'utf-8');
   const validationReport = parse(validationContent);
 
   const planContent = readFileSync(planPath, 'utf-8');
   const planFp = fingerprint(planContent);
+
+  // Verify fingerprint coherency: plan.md must match the fingerprint stored in plan.yaml
+  const yamlContent = readFileSync(yamlPath, 'utf-8');
+  const yamlParsed = parse(yamlContent);
+  const storedFingerprint = yamlParsed?.source_md_fingerprint as string | undefined;
+  if (storedFingerprint && storedFingerprint !== planFp) {
+    throw new Error(
+      `fingerprint mismatch: plan.md (${planFp}) does not match plan.yaml source fingerprint (${storedFingerprint}). Re-run \`plan derive\`.`
+    );
+  }
 
   const runId = `review-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
@@ -50,7 +61,10 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   }
 
   // Structural review checks
-  if (!planContent.includes('## Purpose') || planContent.includes('<!-- Describe what this plan is about -->')) {
+  if (
+    !planContent.includes('## Purpose') ||
+    planContent.includes('<!-- Describe what this plan is about -->')
+  ) {
     findings.push({
       severity: 'warning',
       category: 'completeness',
@@ -68,7 +82,11 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
 
   // Determine verdict
   const hasCritical = findings.some((f) => f.severity === 'critical');
-  const verdict: ReviewVerdict = hasCritical ? 'FAIL' : findings.length > 0 ? 'PASS_WITH_NOTES' : 'PASS';
+  const verdict: ReviewVerdict = hasCritical
+    ? 'FAIL'
+    : findings.length > 0
+      ? 'PASS_WITH_NOTES'
+      : 'PASS';
 
   const report = {
     run_id: runId,
@@ -77,9 +95,10 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
     reviewed_at: now(),
     verdict,
     findings,
-    notes: findings.length > 0
-      ? ['Review completed with findings. Address critical items before proceeding.']
-      : ['Review completed. No issues found.'],
+    notes:
+      findings.length > 0
+        ? ['Review completed with findings. Address critical items before proceeding.']
+        : ['Review completed. No issues found.'],
   };
 
   // Write review report
@@ -90,9 +109,17 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   // Write review run artifacts
   const reviewRunsDir = join(projectRoot, '_ctx', 'review_runs', runId);
   mkdirSync(reviewRunsDir, { recursive: true });
-  writeFileSync(join(reviewRunsDir, 'input-ref.yaml'), `plan_id: ${id}\nplan_md_fingerprint: ${planFp}\n`, 'utf-8');
+  writeFileSync(
+    join(reviewRunsDir, 'input-ref.yaml'),
+    `plan_id: ${id}\nplan_md_fingerprint: ${planFp}\n`,
+    'utf-8'
+  );
   writeFileSync(join(reviewRunsDir, 'findings.yaml'), stringify(findings), 'utf-8');
-  writeFileSync(join(reviewRunsDir, 'summary.md'), `Verdict: ${verdict}\nFindings: ${findings.length}\n`, 'utf-8');
+  writeFileSync(
+    join(reviewRunsDir, 'summary.md'),
+    `Verdict: ${verdict}\nFindings: ${findings.length}\n`,
+    'utf-8'
+  );
 
   // Update state based on verdict
   if (verdict === 'FAIL') {
