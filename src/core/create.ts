@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanState } from '../types/index.js';
 import { getPlanDir } from './resolver.js';
+import { now } from './utils.js';
 
 const PLAN_TEMPLATE = (id: string) => `# Plan: ${id}
 
@@ -52,10 +53,6 @@ export function generateId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
   return `plan-${timestamp}-${random}`;
-}
-
-export function now(): string {
-  return new Date().toISOString();
 }
 
 export async function createPlan(projectRoot: string, planId?: string): Promise<string> {

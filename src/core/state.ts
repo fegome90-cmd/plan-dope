@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanState } from '../types/index.js';
-import { now } from './create.js';
+import { now } from './utils.js';
 
 interface StateFile {
   plan_id: string;
