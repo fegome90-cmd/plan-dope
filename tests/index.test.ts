@@ -453,10 +453,11 @@ describe('extended YAML fields', () => {
 describe('config boundaries', () => {
   // Config tests use a tmp home to avoid polluting real ~/.plan_dope/
   let origHome: string | undefined;
+  let tmpHome: string;
 
   beforeEach(() => {
     origHome = process.env.HOME;
-    const tmpHome = join('/tmp', `plan-dope-home-${randomBytes(4).toString('hex')}`);
+    tmpHome = join('/tmp', `plan-dope-home-${randomBytes(4).toString('hex')}`);
     mkdirSync(tmpHome, { recursive: true });
     process.env.HOME = tmpHome;
   });
@@ -465,6 +466,7 @@ describe('config boundaries', () => {
     if (origHome !== undefined) {
       process.env.HOME = origHome;
     }
+    rmSync(tmpHome, { recursive: true, force: true });
   });
 
   it('returns defaults when no global config exists', () => {

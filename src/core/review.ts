@@ -2,10 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { Finding, ReviewVerdict } from '../types/index.js';
-import { now } from './utils.js';
 import { fingerprint } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
+import { now } from './utils.js';
 
 export async function reviewPlan(projectRoot: string, planId?: string): Promise<string> {
   const id = findPlanId(projectRoot, planId);
@@ -16,9 +16,9 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   const validationPath = join(planDir, 'validation-report.yaml');
 
   if (!existsSync(planPath)) throw new Error(`plan.md not found for plan '${id}'`);
-  if (!existsSync(yamlPath)) throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
+  if (!existsSync(yamlPath)) throw new Error('plan.yaml not found. Run `plan derive` first.');
   if (!existsSync(validationPath))
-    throw new Error(`validation-report.yaml not found. Run \`plan validate\` first.`);
+    throw new Error('validation-report.yaml not found. Run `plan validate` first.');
 
   const validationContent = readFileSync(validationPath, 'utf-8');
   const validationReport = parse(validationContent);
@@ -31,7 +31,7 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   const yamlParsed = parse(yamlContent);
   const storedFingerprint = yamlParsed?.source_md_fingerprint as string | undefined;
   if (!storedFingerprint) {
-    throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
+    throw new Error('plan.yaml missing source_md_fingerprint; re-run `plan derive`.');
   }
   if (storedFingerprint !== planFp) {
     throw new Error(
@@ -44,7 +44,7 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   const validationYamlFp = validationReport.plan_yaml_fingerprint as string | undefined;
   if (!validationYamlFp) {
     throw new Error(
-      `validation-report.yaml missing plan_yaml_fingerprint; re-run \`plan validate\`.`
+      'validation-report.yaml missing plan_yaml_fingerprint; re-run `plan validate`.'
     );
   }
   if (validationYamlFp !== yamlFp) {

@@ -46,35 +46,12 @@ export function getPlansDir(projectRoot: string): string {
 
 const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
 
-const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
-
 export function findPlanId(projectRoot: string, planId?: string): string {
   if (planId) {
     const dir = getPlanDir(projectRoot, planId);
     if (!existsSync(join(dir, 'plan.md'))) {
       throw new Error(`Plan '${planId}' not found at ${dir}`);
     }
-    return planId;
-  }
-
-  const plansDir = getPlansDir(projectRoot);
-  if (!existsSync(plansDir)) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  const dirs = readdirSync(plansDir).filter((d) => existsSync(join(plansDir, d, 'plan.md')));
-
-  if (dirs.length === 0) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  const latest = dirs.sort().pop();
-  if (!latest) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  return latest;
-}
     return planId;
   }
 

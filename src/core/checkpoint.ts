@@ -2,10 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import type { HandoffReason } from '../types/index.js';
-import { now } from './utils.js';
 import { fingerprint } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
+import { now } from './utils.js';
 
 export async function createCheckpoint(
   projectRoot: string,
@@ -33,19 +33,19 @@ export async function createCheckpoint(
   const planPath = join(planDir, 'plan.md');
   const reviewPath = join(planDir, 'review-report.md');
 
-  if (!existsSync(planPath)) throw new Error(`plan.md not found`);
-  if (!existsSync(reviewPath)) throw new Error(`review-report.md not found`);
+  if (!existsSync(planPath)) throw new Error('plan.md not found');
+  if (!existsSync(reviewPath)) throw new Error('review-report.md not found');
 
   // Verify fingerprint coherency before creating checkpoint
   const planContent = readFileSync(planPath, 'utf-8');
   const currentFp = fingerprint(planContent);
   const yamlPath = join(planDir, 'plan.yaml');
-  if (!existsSync(yamlPath)) throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
+  if (!existsSync(yamlPath)) throw new Error('plan.yaml not found. Run `plan derive` first.');
   const yamlContent = readFileSync(yamlPath, 'utf-8');
   const yamlParsed = parse(yamlContent);
   const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
   if (!storedFp) {
-    throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
+    throw new Error('plan.yaml missing source_md_fingerprint; re-run `plan derive`.');
   }
   if (storedFp !== currentFp) {
     throw new Error(
@@ -56,7 +56,7 @@ export async function createCheckpoint(
   const reviewContent = readFileSync(reviewPath, 'utf-8');
   // Read validation report
   const validationPath = join(planDir, 'validation-report.yaml');
-  if (!existsSync(validationPath)) throw new Error(`validation-report.yaml not found`);
+  if (!existsSync(validationPath)) throw new Error('validation-report.yaml not found');
   const validationContent = readFileSync(validationPath, 'utf-8');
 
   // Generate checkpoint markdown

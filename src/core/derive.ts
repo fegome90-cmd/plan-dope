@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { DriftOutcome, PlanYaml } from '../types/index.js';
-import { now } from './utils.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
+import { now } from './utils.js';
 
 export function fingerprint(content: string): string {
   return createHash('sha256').update(content).digest('hex').substring(0, 12);
@@ -252,12 +252,12 @@ export function checkAndInvalidateDrift(planDir: string, currentFingerprint: str
       { src: join(planDir, 'review-report.md'), dest: join(historyDir, 'review-report.md') },
     ];
 
-    artifacts.forEach(({ src, dest }) => {
+    for (const { src, dest } of artifacts) {
       if (existsSync(src)) {
         const data = readFileSync(src);
         writeFileSync(dest, data);
       }
-    });
+    }
 
     updateState(planDir, 'DRAFT');
     return { type: 'drift-detected', archivedTo: historyDir };

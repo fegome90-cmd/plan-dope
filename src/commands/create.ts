@@ -4,7 +4,14 @@ import { resolveProjectRoot } from '../core/resolver.js';
 import type { CommandOptions } from '../types/index.js';
 
 export function createCommand(_program: Command, opts: CommandOptions & { id?: string }): void {
-  const projectRoot = resolveProjectRoot(opts.project);
+  let projectRoot: string;
+  try {
+    projectRoot = resolveProjectRoot(opts.project);
+  } catch (error) {
+    process.stderr.write(`Error: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+    return;
+  }
   createPlan(projectRoot, opts.id).then(
     (planPath) => {
       process.stdout.write(`${planPath}\n`);
