@@ -1,9 +1,8 @@
-import type { Command } from 'commander';
 import { derivePlan } from '../core/derive.js';
 import { resolveProjectRoot } from '../core/resolver.js';
 import type { CommandOptions } from '../types/index.js';
 
-export function deriveCommand(_program: Command, opts: CommandOptions & { planId?: string }): void {
+export function deriveCommand(opts: CommandOptions & { planId?: string }): void {
   let projectRoot: string;
   try {
     projectRoot = resolveProjectRoot(opts.project);

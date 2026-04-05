@@ -71,7 +71,6 @@ export function readState(planDir: string): StateFile {
 export function updateState(planDir: string, newState: PlanState): void {
   const state = readState(planDir);
   validateStateTransition(state.state, newState);
-  state.state = newState;
-  state.updated_at = now();
-  writeFileSync(join(planDir, '.state.json'), JSON.stringify(state, null, 2), 'utf-8');
+  const updated: StateFile = { ...state, state: newState, updated_at: now() };
+  writeFileSync(join(planDir, '.state.json'), JSON.stringify(updated, null, 2), 'utf-8');
 }

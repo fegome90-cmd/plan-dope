@@ -108,7 +108,7 @@ export function readProjectOverride(projectRoot: string): ProjectOverride {
 
     for (const key of ALLOWED_PROJECT_OVERRIDE_KEYS) {
       if (key in parsed) {
-        (override as Record<string, unknown>)[key] = parsed[key];
+        override[key] = parsed[key] as string;
       }
     }
 

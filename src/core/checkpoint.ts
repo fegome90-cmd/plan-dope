@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parse } from 'yaml';
 import type { HandoffReason } from '../types/index.js';
-import { fingerprint } from './derive.js';
+import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
 import { now } from './utils.js';
@@ -39,19 +38,7 @@ export async function createCheckpoint(
   // Verify fingerprint coherency before creating checkpoint
   const planContent = readFileSync(planPath, 'utf-8');
   const currentFp = fingerprint(planContent);
-  const yamlPath = join(planDir, 'plan.yaml');
-  if (!existsSync(yamlPath)) throw new Error('plan.yaml not found. Run `plan derive` first.');
-  const yamlContent = readFileSync(yamlPath, 'utf-8');
-  const yamlParsed = parse(yamlContent);
-  const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
-  if (!storedFp) {
-    throw new Error('plan.yaml missing source_md_fingerprint; re-run `plan derive`.');
-  }
-  if (storedFp !== currentFp) {
-    throw new Error(
-      `fingerprint mismatch: plan.md (${currentFp}) does not match plan.yaml source fingerprint (${storedFp}). Re-run \`plan derive\`.`
-    );
-  }
+  verifyFingerprintCoherency(planDir, currentFp);
 
   const reviewContent = readFileSync(reviewPath, 'utf-8');
   // Read validation report
@@ -61,7 +48,7 @@ export async function createCheckpoint(
 
   // Generate checkpoint markdown
   const nowDate = new Date();
-  const date = nowDate.toISOString().split('T')[0];
+  const date = nowDate.toISOString().split('T').at(0) ?? '';
   const time = nowDate.toTimeString().substring(0, 8).replace(/:/g, '');
   const checkpointName = `checkpoint_${time}_${id}.md`;
 

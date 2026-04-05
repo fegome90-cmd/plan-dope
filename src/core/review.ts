@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { Finding, ReviewVerdict } from '../types/index.js';
-import { fingerprint } from './derive.js';
+import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 import { now } from './utils.js';
@@ -26,18 +26,8 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   const planContent = readFileSync(planPath, 'utf-8');
   const planFp = fingerprint(planContent);
 
-  // Verify fingerprint coherency: plan.md must match the fingerprint stored in plan.yaml
+  verifyFingerprintCoherency(planDir, planFp);
   const yamlContent = readFileSync(yamlPath, 'utf-8');
-  const yamlParsed = parse(yamlContent);
-  const storedFingerprint = yamlParsed?.source_md_fingerprint as string | undefined;
-  if (!storedFingerprint) {
-    throw new Error('plan.yaml missing source_md_fingerprint; re-run `plan derive`.');
-  }
-  if (storedFingerprint !== planFp) {
-    throw new Error(
-      `fingerprint mismatch: plan.md (${planFp}) does not match plan.yaml source fingerprint (${storedFingerprint}). Re-run \`plan derive\`.`
-    );
-  }
 
   // Verify validation-report corresponds to current plan.yaml
   const yamlFp = fingerprint(yamlContent);

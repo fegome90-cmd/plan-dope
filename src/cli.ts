@@ -8,7 +8,7 @@ export function registerCommands(program: Command): void {
     .option('--id <plan-id>', 'ID del plan (auto-generado si no se pasa)')
     .action(async (opts) => {
       const { createCommand } = await import('./commands/create.js');
-      createCommand(program, opts);
+      createCommand(opts);
     });
 
   program
@@ -18,7 +18,7 @@ export function registerCommands(program: Command): void {
     .option('--plan-id <plan-id>', 'ID del plan a derivar')
     .action(async (opts) => {
       const { deriveCommand } = await import('./commands/derive.js');
-      deriveCommand(program, opts);
+      deriveCommand(opts);
     });
 
   program
@@ -28,7 +28,7 @@ export function registerCommands(program: Command): void {
     .option('--plan-id <plan-id>', 'ID del plan a validar')
     .action(async (opts) => {
       const { validateCommand } = await import('./commands/validate.js');
-      validateCommand(program, opts);
+      validateCommand(opts);
     });
 
   program
@@ -38,7 +38,7 @@ export function registerCommands(program: Command): void {
     .option('--plan-id <plan-id>', 'ID del plan a revisar')
     .action(async (opts) => {
       const { reviewCommand } = await import('./commands/review.js');
-      reviewCommand(program, opts);
+      reviewCommand(opts);
     });
 
   program
@@ -49,7 +49,7 @@ export function registerCommands(program: Command): void {
     .option('-r, --reason <reason>', 'Razón de handoff: pause, transfer, completion', 'transfer')
     .action(async (opts) => {
       const { checkpointCommand } = await import('./commands/checkpoint.js');
-      checkpointCommand(program, opts);
+      checkpointCommand(opts);
     });
 
   program
@@ -58,7 +58,7 @@ export function registerCommands(program: Command): void {
     .option('-p, --project <path>', 'Path del proyecto target')
     .action(async (opts) => {
       const { wizardCommand } = await import('./commands/wizard.js');
-      wizardCommand(program, opts);
+      wizardCommand(opts);
     });
 
   program

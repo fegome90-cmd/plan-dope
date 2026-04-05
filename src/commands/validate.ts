@@ -1,10 +1,8 @@
-import type { Command } from 'commander';
 import { resolveProjectRoot } from '../core/resolver.js';
 import { validatePlan } from '../core/validate.js';
 import type { CommandOptions } from '../types/index.js';
 
 export function validateCommand(
-  _program: Command,
   opts: CommandOptions & { planId?: string }
 ): void {
   let projectRoot: string;

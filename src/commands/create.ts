@@ -1,9 +1,8 @@
-import type { Command } from 'commander';
 import { createPlan } from '../core/create.js';
 import { resolveProjectRoot } from '../core/resolver.js';
 import type { CommandOptions } from '../types/index.js';
 
-export function createCommand(_program: Command, opts: CommandOptions & { id?: string }): void {
+export function createCommand(opts: CommandOptions & { id?: string }): void {
   let projectRoot: string;
   try {
     projectRoot = resolveProjectRoot(opts.project);

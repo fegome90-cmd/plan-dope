@@ -1,5 +1,4 @@
 import * as readline from 'node:readline';
-import type { Command } from 'commander';
 import { createCheckpoint } from '../core/checkpoint.js';
 import { createPlan } from '../core/create.js';
 import { derivePlan } from '../core/derive.js';
@@ -11,7 +10,11 @@ import type { CommandOptions, HandoffReason } from '../types/index.js';
 const log = (msg: string) => process.stderr.write(`${msg}\n`);
 const out = (msg: string) => process.stdout.write(`${msg}\n`);
 
-export function wizardCommand(_program: Command, opts: CommandOptions): void {
+function isValidHandoffReason(s: string): s is HandoffReason {
+  return s === 'pause' || s === 'transfer' || s === 'completion';
+}
+
+export function wizardCommand(opts: CommandOptions): void {
   const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
   const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
 
@@ -39,7 +42,7 @@ export function wizardCommand(_program: Command, opts: CommandOptions): void {
     if (!planId) {
       const match = planPath.match(/plans[/\\]([^/\\]+)[/\\]plan\.md$/);
       if (match) {
-        planId = match[1];
+        planId = match[1] ?? '';
       }
     }
 
@@ -62,10 +65,7 @@ export function wizardCommand(_program: Command, opts: CommandOptions): void {
     const reasonInput = (
       await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')
     ).trim();
-    const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
-    const reason = validReasons.includes(reasonInput as HandoffReason)
-      ? (reasonInput as HandoffReason)
-      : 'transfer';
+    const reason = isValidHandoffReason(reasonInput) ? reasonInput : 'transfer';
     const checkpointPath = await createCheckpoint(projectRoot, planId || undefined, reason);
     out(checkpointPath);
     log('');
