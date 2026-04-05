@@ -5,7 +5,7 @@ CLI para generar, validar y revisar planes técnicos de desarrollo.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-ESM-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-74%2F74-brightgreen.svg)]()
+![Tests](https://img.shields.io/badge/Tests-74%2F74-brightgreen.svg)
 [![Biome](https://img.shields.io/badge/code%20style-biome-60a5fa.svg)](https://biomejs.dev/)
 
 ## Purpose
@@ -70,7 +70,9 @@ npx tsx src/index.ts checkpoint --plan-id my-feature
 | `plan wizard` | Interactive pipeline: create → derive → validate → review → checkpoint | `--project <path>` |
 | `plan completion` | Generate shell completion script | `<bash\|zsh\|fish>` |
 
-### Global Options
+### Common Options
+
+All commands (except `completion`) support the following option:
 
 | Option | Description | Default |
 |--------|-------------|---------|
