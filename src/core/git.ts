@@ -22,3 +22,22 @@ export function isGitRepo(root: string): boolean {
     return false;
   }
 }
+
+/**
+ * Resolve the git repository toplevel for a given directory.
+ * Returns null if not inside a git repo or if the command fails.
+ */
+export function gitToplevel(dir: string): string | null {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      cwd: dir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+      maxBuffer: 1024,
+    })
+      .toString()
+      .trim();
+  } catch {
+    return null;
+  }
+}

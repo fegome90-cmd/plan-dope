@@ -21,8 +21,6 @@ import { parse, stringify } from 'yaml';
  */
 
 export interface GlobalConfig {
-  /** Default project path for CLI operations */
-  default_project_path?: string;
   /** Base path for artifacts within each project (default: _ctx) */
   artifacts_base_path?: string;
   /** Whether to auto-derive plan.yaml after plan.md creation */
@@ -108,7 +106,7 @@ export function readProjectOverride(projectRoot: string): ProjectOverride {
 
     for (const key of ALLOWED_PROJECT_OVERRIDE_KEYS) {
       if (key in parsed) {
-        (override as Record<string, unknown>)[key] = parsed[key];
+        override[key] = parsed[key] as string;
       }
     }
 

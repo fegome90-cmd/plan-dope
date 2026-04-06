@@ -3,3 +3,13 @@ dist/
 *.tsbuildinfo
 coverage/
 _ctx/
+.DS_Store
+.atl/
+openspec/
+explore/
+.env
+
+# Temp dirs
+.claude/
+planning-cli-inventario-*/
+src/ui/

@@ -102,7 +102,6 @@ export interface CheckpointPayload {
 
 // Configuración global del CLI
 export interface CliConfig {
-  default_project_path?: string;
   artifacts_base_path?: string; // default: _ctx/plans/
 }
 

@@ -19,8 +19,8 @@ Three core pipelines + one handoff artifact:
 
 1. **Authoring** → `plan.md` (human authority)
 2. **Validation** → `plan.yaml` + `validation-report.yaml` (derived)
-3. **Review** → `review-report.md` (verdict: PASS / PASS_WITH_NOTES / FAIL)
-4. **Checkpoint** → handoff via `checkpoint-card` skill (not a standalone pipeline)
+3. **Structural Review** → `review-report.md` (verdict: PASS / PASS_WITH_NOTES / FAIL)
+4. **Checkpoint** → native handoff artifact (markdown for context transfer)
 
 ### Key Rules
 

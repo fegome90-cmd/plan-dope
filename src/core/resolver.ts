@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { isGitRepo } from './git.js';
+import { gitToplevel, isGitRepo } from './git.js';
 
 export function resolveProjectRoot(projectPath?: string): string {
   if (projectPath) {
@@ -18,7 +18,8 @@ export function resolveProjectRoot(projectPath?: string): string {
       );
     }
 
-    return resolved;
+    const toplevel = gitToplevel(resolved);
+    return toplevel ?? resolved;
   }
 
   // Use cwd
@@ -33,52 +34,30 @@ export function resolveProjectRoot(projectPath?: string): string {
     );
   }
 
-  return cwd;
+  const toplevel = gitToplevel(cwd);
+  return toplevel ?? cwd;
 }
 
-export function getPlanDir(projectRoot: string, planId: string): string {
-  return join(projectRoot, '_ctx', 'plans', planId);
+export function getPlanDir(projectRoot: string, planId: string, artifactsBase = '_ctx'): string {
+  return join(projectRoot, artifactsBase, 'plans', planId);
 }
 
-export function getPlansDir(projectRoot: string): string {
-  return join(projectRoot, '_ctx', 'plans');
+export function getPlansDir(projectRoot: string, artifactsBase = '_ctx'): string {
+  return join(projectRoot, artifactsBase, 'plans');
 }
 
 const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
 
-const NO_PLANS_FOUND = 'No plans found. Run `plan create` first.';
-
-export function findPlanId(projectRoot: string, planId?: string): string {
+export function findPlanId(projectRoot: string, planId?: string, artifactsBase = '_ctx'): string {
   if (planId) {
-    const dir = getPlanDir(projectRoot, planId);
+    const dir = getPlanDir(projectRoot, planId, artifactsBase);
     if (!existsSync(join(dir, 'plan.md'))) {
       throw new Error(`Plan '${planId}' not found at ${dir}`);
     }
     return planId;
   }
 
-  const plansDir = getPlansDir(projectRoot);
-  if (!existsSync(plansDir)) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  const dirs = readdirSync(plansDir).filter((d) => existsSync(join(plansDir, d, 'plan.md')));
-
-  if (dirs.length === 0) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  const latest = dirs.sort().pop();
-  if (!latest) {
-    throw new Error(NO_PLANS_FOUND);
-  }
-
-  return latest;
-}
-    return planId;
-  }
-
-  const plansDir = getPlansDir(projectRoot);
+  const plansDir = getPlansDir(projectRoot, artifactsBase);
   if (!existsSync(plansDir)) {
     throw new Error(NO_PLANS_FOUND);
   }

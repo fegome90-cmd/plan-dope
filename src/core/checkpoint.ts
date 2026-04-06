@@ -1,19 +1,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parse } from 'yaml';
 import type { HandoffReason } from '../types/index.js';
-import { now } from './utils.js';
-import { fingerprint } from './derive.js';
+import { resolveArtifactsBasePath } from './config.js';
+import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
+import { now } from './utils.js';
 
 export async function createCheckpoint(
   projectRoot: string,
   planId: string | undefined,
   reason: HandoffReason
 ): Promise<string> {
-  const id = findPlanId(projectRoot, planId);
-  const planDir = getPlanDir(projectRoot, id);
+  const artifactsBase = resolveArtifactsBasePath(projectRoot);
+  const id = findPlanId(projectRoot, planId, artifactsBase);
+  const planDir = getPlanDir(projectRoot, id, artifactsBase);
   // Defensive: protects against unsafe callers using `as HandoffReason`
   const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
   if (!validReasons.includes(reason)) {
@@ -33,39 +34,27 @@ export async function createCheckpoint(
   const planPath = join(planDir, 'plan.md');
   const reviewPath = join(planDir, 'review-report.md');
 
-  if (!existsSync(planPath)) throw new Error(`plan.md not found`);
-  if (!existsSync(reviewPath)) throw new Error(`review-report.md not found`);
+  if (!existsSync(planPath)) throw new Error('plan.md not found');
+  if (!existsSync(reviewPath)) throw new Error('review-report.md not found');
 
   // Verify fingerprint coherency before creating checkpoint
   const planContent = readFileSync(planPath, 'utf-8');
   const currentFp = fingerprint(planContent);
-  const yamlPath = join(planDir, 'plan.yaml');
-  if (!existsSync(yamlPath)) throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
-  const yamlContent = readFileSync(yamlPath, 'utf-8');
-  const yamlParsed = parse(yamlContent);
-  const storedFp = yamlParsed?.source_md_fingerprint as string | undefined;
-  if (!storedFp) {
-    throw new Error(`plan.yaml missing source_md_fingerprint; re-run \`plan derive\`.`);
-  }
-  if (storedFp !== currentFp) {
-    throw new Error(
-      `fingerprint mismatch: plan.md (${currentFp}) does not match plan.yaml source fingerprint (${storedFp}). Re-run \`plan derive\`.`
-    );
-  }
+  verifyFingerprintCoherency(planDir, currentFp);
 
   const reviewContent = readFileSync(reviewPath, 'utf-8');
   // Read validation report
   const validationPath = join(planDir, 'validation-report.yaml');
-  if (!existsSync(validationPath)) throw new Error(`validation-report.yaml not found`);
+  if (!existsSync(validationPath)) throw new Error('validation-report.yaml not found');
   const validationContent = readFileSync(validationPath, 'utf-8');
 
   // Generate checkpoint markdown
   const nowDate = new Date();
-  const date = nowDate.toISOString().split('T')[0];
+  const date = nowDate.toISOString().split('T').at(0) ?? '';
   const time = nowDate.toTimeString().substring(0, 8).replace(/:/g, '');
   const checkpointName = `checkpoint_${time}_${id}.md`;
 
-  const checkpointDir = join(projectRoot, '_ctx', 'checkpoints', date);
+  const checkpointDir = join(projectRoot, artifactsBase, 'checkpoints', date);
   if (!existsSync(checkpointDir)) {
     mkdirSync(checkpointDir, { recursive: true });
   }
@@ -96,8 +85,8 @@ ${pendingTasks.length > 0 ? pendingTasks.map((t) => `- ${t}`).join('\n') : 'None
 ${pendingErrors.length > 0 ? pendingErrors.map((e) => `- ${e}`).join('\n') : 'None'}
 
 ## Next Agent Prompt
- ${nextAgentPrompt}
- 
+${nextAgentPrompt}
+
 ## Current Plan
 ${planPath}
 

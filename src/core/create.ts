@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PlanState } from '../types/index.js';
+import { resolveArtifactsBasePath } from './config.js';
 import { getPlanDir } from './resolver.js';
 import { now } from './utils.js';
 
@@ -57,7 +58,8 @@ export function generateId(): string {
 
 export async function createPlan(projectRoot: string, planId?: string): Promise<string> {
   const id = planId || generateId();
-  const planDir = getPlanDir(projectRoot, id);
+  const artifactsBase = resolveArtifactsBasePath(projectRoot);
+  const planDir = getPlanDir(projectRoot, id, artifactsBase);
 
   if (!existsSync(planDir)) {
     mkdirSync(planDir, { recursive: true });
