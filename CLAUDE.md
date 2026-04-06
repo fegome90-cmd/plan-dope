@@ -1,6 +1,6 @@
 # plan_dope
 
-CLI para generar, validar y revisar planes técnicos de desarrollo.
+CLI para la planificación supervisada de desarrollo técnico.
 
 ## Stack
 
@@ -49,3 +49,7 @@ Three core pipelines + one handoff artifact:
 
 - `CONSTITUTION.md` — governing laws and principles
 - `ARCHITECTURE-v1.md` — operational architecture (subordinate to constitution)
+
+> Nota: Los fragmentos arquitecturales en este archivo (pipelines, comandos,
+> estados) son resúmenes de CONSTITUTION.md y ARCHITECTURE-v1.md. Si hay
+> conflicto, mandan esos documentos.
