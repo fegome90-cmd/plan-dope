@@ -6,6 +6,7 @@ import { resolveProjectRoot } from '../core/resolver.js';
 import { reviewPlan } from '../core/review.js';
 import { validatePlan } from '../core/validate.js';
 import type { CommandOptions, HandoffReason } from '../types/index.js';
+import { badge, pipelineDone, pipelineStart, stepDone, stepStart } from '../ui/index.js';
 
 const log = (msg: string) => process.stderr.write(`${msg}\n`);
 const out = (msg: string) => process.stdout.write(`${msg}\n`);
@@ -28,17 +29,15 @@ export function wizardCommand(opts: CommandOptions): void {
   (async () => {
     const projectRoot = resolveProjectRoot(opts.project);
 
-    log('═══════════════════════════════════════════');
-    log('  plan_dope wizard — pipeline interactivo');
-    log('═══════════════════════════════════════════\n');
+    log(pipelineStart('plan_dope wizard — pipeline interactivo'));
 
-    log('[1/5] Creando plan.md...');
+    log(stepStart(1, 5, 'Creando plan.md...'));
     let planId = (await ask('ID del plan (Enter para auto-generar): ')).trim();
     const planPath = await createPlan(projectRoot, planId || undefined);
     out(planPath);
+    log(stepDone(planPath));
     log('');
 
-    // If planId was empty, extract the generated ID from the returned path
     if (!planId) {
       const match = planPath.match(/plans[/\\]([^/\\]+)[/\\]plan\.md$/);
       if (match) {
@@ -46,38 +45,40 @@ export function wizardCommand(opts: CommandOptions): void {
       }
     }
 
-    log('[2/5] Derivando plan.yaml...');
+    log(stepStart(2, 5, 'Derivando plan.yaml...'));
     const yamlPath = await derivePlan(projectRoot, planId || undefined);
     out(yamlPath);
+    log(stepDone(yamlPath));
     log('');
 
-    log('[3/5] Validando plan.yaml...');
+    log(stepStart(3, 5, 'Validando plan.yaml...'));
     const reportPath = await validatePlan(projectRoot, planId || undefined);
     out(reportPath);
+    log(stepDone(reportPath));
     log('');
 
-    log('[4/5] Ejecutando review...');
+    log(stepStart(4, 5, 'Ejecutando review...'));
     const reviewPath = await reviewPlan(projectRoot, planId || undefined);
     out(reviewPath);
+    log(stepDone(reviewPath));
     log('');
 
-    log('[5/5] Creando checkpoint de handoff...');
+    log(stepStart(5, 5, 'Creando checkpoint de handoff...'));
     const reasonInput = (
       await ask('Razón de handoff (pause/transfer/completion) [transfer]: ')
     ).trim();
     const reason = isValidHandoffReason(reasonInput) ? reasonInput : 'transfer';
     const checkpointPath = await createCheckpoint(projectRoot, planId || undefined, reason);
     out(checkpointPath);
+    log(badge('checkpoint', checkpointPath));
     log('');
 
-    log('═══════════════════════════════════════════');
-    log('  Pipeline completado exitosamente');
-    log('═══════════════════════════════════════════');
+    log(pipelineDone());
 
     process.off('SIGINT', onSigint);
     rl.close();
   })().catch((error: unknown) => {
-    log(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    log(`${badge('fail')} ${error instanceof Error ? error.message : String(error)}`);
     process.off('SIGINT', onSigint);
     rl.close();
     process.exit(1);
