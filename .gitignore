@@ -8,3 +8,8 @@ _ctx/
 openspec/
 explore/
 .env
+
+# Temp dirs
+.claude/
+planning-cli-inventario-*/
+src/ui/
