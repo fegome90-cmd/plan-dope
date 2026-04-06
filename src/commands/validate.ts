@@ -2,9 +2,7 @@ import { resolveProjectRoot } from '../core/resolver.js';
 import { validatePlan } from '../core/validate.js';
 import type { CommandOptions } from '../types/index.js';
 
-export function validateCommand(
-  opts: CommandOptions & { planId?: string }
-): void {
+export function validateCommand(opts: CommandOptions & { planId?: string }): void {
   let projectRoot: string;
   try {
     projectRoot = resolveProjectRoot(opts.project);

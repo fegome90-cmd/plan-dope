@@ -3,3 +3,8 @@ dist/
 *.tsbuildinfo
 coverage/
 _ctx/
+.DS_Store
+.atl/
+openspec/
+explore/
+.env

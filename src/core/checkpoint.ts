@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HandoffReason } from '../types/index.js';
+import { resolveArtifactsBasePath } from './config.js';
 import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { readState, updateState } from './state.js';
@@ -11,8 +12,9 @@ export async function createCheckpoint(
   planId: string | undefined,
   reason: HandoffReason
 ): Promise<string> {
-  const id = findPlanId(projectRoot, planId);
-  const planDir = getPlanDir(projectRoot, id);
+  const artifactsBase = resolveArtifactsBasePath(projectRoot);
+  const id = findPlanId(projectRoot, planId, artifactsBase);
+  const planDir = getPlanDir(projectRoot, id, artifactsBase);
   // Defensive: protects against unsafe callers using `as HandoffReason`
   const validReasons: HandoffReason[] = ['pause', 'transfer', 'completion'];
   if (!validReasons.includes(reason)) {
@@ -52,7 +54,7 @@ export async function createCheckpoint(
   const time = nowDate.toTimeString().substring(0, 8).replace(/:/g, '');
   const checkpointName = `checkpoint_${time}_${id}.md`;
 
-  const checkpointDir = join(projectRoot, '_ctx', 'checkpoints', date);
+  const checkpointDir = join(projectRoot, artifactsBase, 'checkpoints', date);
   if (!existsSync(checkpointDir)) {
     mkdirSync(checkpointDir, { recursive: true });
   }
@@ -83,8 +85,8 @@ ${pendingTasks.length > 0 ? pendingTasks.map((t) => `- ${t}`).join('\n') : 'None
 ${pendingErrors.length > 0 ? pendingErrors.map((e) => `- ${e}`).join('\n') : 'None'}
 
 ## Next Agent Prompt
- ${nextAgentPrompt}
- 
+${nextAgentPrompt}
+
 ## Current Plan
 ${planPath}
 

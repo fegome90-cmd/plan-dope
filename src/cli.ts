@@ -138,12 +138,14 @@ _plan_dope_completion
   if (shell === 'fish') {
     return `# Fish shell completion for plan_dope
 ${cmdList.map((name) => `complete -c plan -n "__fish_use_subcommand" -a ${name}`).join('\n')}
-${[
-  `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames}" -l project -d "Path del proyecto target"`,
-  `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames}" -l plan-id -d "ID del plan"`,
-  `complete -c plan -n "__fish_seen_subcommand_from ${cmdNames}" -l id -d "ID del plan"`,
-  `complete -c plan -n "__fish_seen_subcommand_from checkpoint" -l reason -d "Razón de handoff" -a "pause transfer completion"`,
-].join('\n')}
+${cmdList
+  .flatMap((name) => [
+    `complete -c plan -n "__fish_seen_subcommand_from ${name}" -l project -d "Path del proyecto target"`,
+    `complete -c plan -n "__fish_seen_subcommand_from ${name}" -l plan-id -d "ID del plan"`,
+    `complete -c plan -n "__fish_seen_subcommand_from ${name}" -l id -d "ID del plan"`,
+  ])
+  .join('\n')}
+complete -c plan -n "__fish_seen_subcommand_from checkpoint" -l reason -d "Razón de handoff" -a "pause transfer completion"
 `;
   }
 

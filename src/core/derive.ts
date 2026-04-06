@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { DriftOutcome, PlanYaml } from '../types/index.js';
+import { resolveArtifactsBasePath } from './config.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 import { now } from './utils.js';
@@ -14,13 +15,14 @@ export function fingerprint(content: string): string {
 export function verifyFingerprintCoherency(planDir: string, currentFp: string): void {
   const yamlPath = join(planDir, 'plan.yaml');
   if (!existsSync(yamlPath)) {
-    throw new Error(`plan.yaml not found. Run \`plan derive\` first.`);
+    throw new Error('plan.yaml not found. Run `plan derive` first.');
   }
   const yamlContent = readFileSync(yamlPath, 'utf-8');
   const yamlParsed = parse(yamlContent);
-  const storedFp = typeof yamlParsed?.source_md_fingerprint === 'string'
-    ? yamlParsed.source_md_fingerprint
-    : undefined;
+  const storedFp =
+    typeof yamlParsed?.source_md_fingerprint === 'string'
+      ? yamlParsed.source_md_fingerprint
+      : undefined;
   if (storedFp && storedFp !== currentFp) {
     throw new Error(
       `fingerprint mismatch: plan.md (${currentFp}) does not match plan.yaml source fingerprint (${storedFp}). Re-run \`plan derive\`.`
@@ -257,8 +259,9 @@ export function checkAndInvalidateDrift(planDir: string, currentFingerprint: str
 }
 
 export async function derivePlan(projectRoot: string, planId?: string): Promise<string> {
-  const id = findPlanId(projectRoot, planId);
-  const planDir = getPlanDir(projectRoot, id);
+  const artifactsBase = resolveArtifactsBasePath(projectRoot);
+  const id = findPlanId(projectRoot, planId, artifactsBase);
+  const planDir = getPlanDir(projectRoot, id, artifactsBase);
   const planPath = join(planDir, 'plan.md');
 
   if (!existsSync(planPath)) {

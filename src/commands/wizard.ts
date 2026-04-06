@@ -33,7 +33,7 @@ export function wizardCommand(opts: CommandOptions): void {
     log('═══════════════════════════════════════════\n');
 
     log('[1/5] Creando plan.md...');
-    let planId = await ask('ID del plan (Enter para auto-generar): ');
+    let planId = (await ask('ID del plan (Enter para auto-generar): ')).trim();
     const planPath = await createPlan(projectRoot, planId || undefined);
     out(planPath);
     log('');

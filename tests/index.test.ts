@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -52,7 +52,8 @@ describe('resolveProjectRoot', () => {
 
   it('resolves explicit path', () => {
     const root = resolveProjectRoot(tmpDir);
-    expect(root).toBe(tmpDir);
+    // git rev-parse --show-toplevel resolves symlinks (e.g. /tmp → /private/tmp on macOS)
+    expect(root).toBe(realpathSync(tmpDir));
   });
 
   it('throws on non-existent path', () => {
@@ -503,14 +504,14 @@ describe('config boundaries', () => {
   });
 
   it('resolves config with correct precedence: defaults < global < project', () => {
-    writeGlobalConfig({ artifacts_base_path: '_global_ctx', default_project_path: '/global/path' });
+    writeGlobalConfig({ artifacts_base_path: '_global_ctx', auto_derive: true });
 
     const projectConfigPath = join(tmpDir, '.plan_dope.yml');
     writeFileSync(projectConfigPath, 'artifacts_base_path: _project_ctx\n', 'utf-8');
 
     const config = resolveConfig(tmpDir);
     expect(config.artifacts_base_path).toBe('_project_ctx');
-    expect(config.default_project_path).toBe('/global/path');
+    expect(config.auto_derive).toBe(true);
   });
 
   it('resolves artifacts base path with project override taking precedence', () => {

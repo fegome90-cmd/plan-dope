@@ -1,1 +1,0 @@
-{"version":3,"file":"checkpoint.d.ts","sourceRoot":"","sources":["../../src/commands/checkpoint.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAGzC,OAAO,KAAK,EAAE,cAAc,EAAE,aAAa,EAAE,MAAM,mBAAmB,CAAC;AAEvE,wBAAgB,iBAAiB,CAC/B,QAAQ,EAAE,OAAO,EACjB,IAAI,EAAE,cAAc,GAAG;IAAE,MAAM,CAAC,EAAE,MAAM,CAAC;IAAC,MAAM,EAAE,aAAa,CAAA;CAAE,GAChE,IAAI,CAYN"}

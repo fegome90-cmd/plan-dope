@@ -67,7 +67,7 @@ El core v1 de `plan_dope` queda limitado a:
 - `review`
 
 `checkpoint` no es un cuarto dominio autónomo: es un **artefacto de handoff** producido por el core al cerrar o transferir contexto.
-Su materialización canónica en v1 se hace usando la **skill existente `checkpoint-card`**, no mediante un sistema de checkpoint propio de `plan_dope`.
+Su materialización en v1 es un writer nativo que genera un archivo markdown de handoff dentro de `_ctx/checkpoints/`.
 
 La ejecución queda fuera del core.
 
@@ -145,8 +145,7 @@ El sistema debe poder explicar qué artefacto derivó de cuál y bajo qué contr
   - artefactos por proyecto;
 - Base de artefactos por proyecto: **configurable**, con default **`_ctx/plans/`**
 - Pipelines core: **`authoring`, `validation`, `review`**
-- Handoff: **`checkpoint`**
-- Método canónico de handoff: **skill `checkpoint-card`**
+- Handoff: **`checkpoint`** (native markdown writer)
 - Ejecución: **fuera del core v1, como consumidor externo**
 - Extensibilidad: **semi-extensible**
 - UX: **subcomandos explícitos + wizard interactivo sobre el mismo core**
@@ -161,7 +160,6 @@ El sistema debe poder explicar qué artefacto derivó de cuál y bajo qué contr
 - Incluir ejecución dentro del core v1.
 - Documentar `execute` como comando core.
 - Convertir `checkpoint` en un subsistema separado del handoff.
-- Reinventar localmente el mecanismo de `checkpoint` en vez de delegar a `checkpoint-card`.
 - Diseñar el CLI como planificador generalista en v1.
 - Duplicar lógica entre wizard y subcomandos.
 - Implementar sincronización bidireccional Markdown ↔ YAML.

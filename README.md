@@ -65,7 +65,7 @@ npx tsx src/index.ts checkpoint --plan-id my-feature
 | `plan create` | Create `plan.md` skeleton | `--id <plan-id>`, `--project <path>` |
 | `plan derive` | Derive `plan.yaml` from `plan.md` | `--plan-id <plan-id>`, `--project <path>` |
 | `plan validate` | Validate `plan.yaml` and produce report | `--plan-id <plan-id>`, `--project <path>` |
-| `plan review` | Review plan and produce verdict | `--plan-id <plan-id>`, `--project <path>` |
+| `plan review` | Structural review: checks coherence, fingerprints, and completeness | `--plan-id <plan-id>`, `--project <path>` |
 | `plan checkpoint` | Create handoff artifact | `--plan-id <plan-id>`, `--project <path>`, `--reason <pause\|transfer\|completion>` |
 | `plan wizard` | Interactive pipeline: create → derive → validate → review → checkpoint | `--project <path>` |
 | `plan completion` | Generate shell completion script | `<bash\|zsh\|fish>` |
@@ -114,7 +114,7 @@ my-project/
 
 - **`plan.md` is the single source of truth.** YAML is derived. If conflict, Markdown wins.
 - **Fingerprint coherency.** Every derived artifact carries a SHA-256 fingerprint of its source. Mismatches are detected and rejected.
-- **Drift detection.** If `plan.md` changes after derivation, the system archives stale artifacts and resets to `DRAFT`.
+- **Drift detection.** If `plan.md` changes after derivation, the system archives stale plan.yaml, validation-report.yaml, and review-report.md to `history/` and resets to `DRAFT`. Checkpoints are not archived (v1 limitation).
 - **Multi-project.** Operates on `cwd` by default; `--project <path>` overrides explicitly.
 - **No execution.** Plans are consumed externally — the CLI produces, it does not run.
 

@@ -2,14 +2,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { Finding, ReviewVerdict } from '../types/index.js';
+import { resolveArtifactsBasePath } from './config.js';
 import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 import { now } from './utils.js';
 
 export async function reviewPlan(projectRoot: string, planId?: string): Promise<string> {
-  const id = findPlanId(projectRoot, planId);
-  const planDir = getPlanDir(projectRoot, id);
+  const artifactsBase = resolveArtifactsBasePath(projectRoot);
+  const id = findPlanId(projectRoot, planId, artifactsBase);
+  const planDir = getPlanDir(projectRoot, id, artifactsBase);
 
   const planPath = join(planDir, 'plan.md');
   const yamlPath = join(planDir, 'plan.yaml');
@@ -114,7 +116,7 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   writeFileSync(reportPath, markdown, 'utf-8');
 
   // Write review run artifacts
-  const reviewRunsDir = join(projectRoot, '_ctx', 'review_runs', runId);
+  const reviewRunsDir = join(projectRoot, artifactsBase, 'review_runs', runId);
   mkdirSync(reviewRunsDir, { recursive: true });
   writeFileSync(
     join(reviewRunsDir, 'input-ref.yaml'),
