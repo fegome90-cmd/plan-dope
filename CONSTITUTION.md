@@ -2,7 +2,11 @@
 
 ## Propósito
 
-`plan_dope` existe para **generar, validar y revisar planes técnicos de desarrollo** de forma consistente, multi-proyecto y automatizable, manteniendo al humano como autor y criterio final, y al sistema como derivador, verificador y productor de handoffs.
+`plan_dope` es un CLI de planificación supervisada para desarrollo técnico.
+Existe para permitir que un humano autorice un plan en Markdown, que el sistema
+derive estructura, valide consistencia, revise calidad y produzca handoffs
+transferibles. El humano mantiene autoridad sobre `plan.md` y criterio final
+en cada ciclo de corrección.
 
 Su función no es ejecutar trabajo técnico ni administrar la vida completa de un delivery. Su función es producir planes legibles, validables y transferibles.
 
@@ -134,7 +138,7 @@ El sistema debe poder explicar qué artefacto derivó de cuál y bajo qué contr
 
 - Runtime: **TypeScript + Node.js**
 - Dominio: **planes técnicos de desarrollo**
-- Scope funcional: **generar + validar + revisar**
+- Scope funcional: **planificación supervisada de planes técnicos**
 - Superficies: **Markdown + YAML**
 - Fuente de verdad: **Markdown**
 - Derivado canónico para validación/interoperabilidad: **YAML**
@@ -164,3 +168,5 @@ El sistema debe poder explicar qué artefacto derivó de cuál y bajo qué contr
 - Duplicar lógica entre wizard y subcomandos.
 - Implementar sincronización bidireccional Markdown ↔ YAML.
 - Agregar un sistema formal de plugins antes de estabilizar los puertos internos.
+- Tratar el sistema como generador automático de planes en vez de herramienta
+  de planificación supervisada donde el humano es autor.
