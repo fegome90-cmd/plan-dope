@@ -2,6 +2,26 @@
 
 > Este documento está gobernado por `CONSTITUTION.md`.  
 > Si hay conflicto entre ambos artefactos, **manda la constitución**.
+>
+> Tesis rectora: plan_dope es un CLI de planificación supervisada para
+> desarrollo técnico. Ver CONSTITUTION.md para la definición completa.
+
+## Resumen ejecutivo
+
+Para una lectura rápida del MVP:
+
+| Concepto         | Valor                                                          |
+|------------------|----------------------------------------------------------------|
+| Pipelines core   | `authoring`, `validation`, `review`                           |
+| Handoff          | `checkpoint` (artefacto, delega a `checkpoint-card`)          |
+| Fuente de verdad | `plan.md` (Markdown)                                          |
+| Derivado         | `plan.yaml` (YAML)                                            |
+| Estados          | `DRAFT → DERIVED → VALIDATED → REVIEWED → HANDOFF_READY`     |
+| Comandos         | `create`, `derive`, `validate`, `review`, `checkpoint`, `wizard` |
+| Convención       | `_ctx/`                                                       |
+| Ejecución        | Fuera del core v1                                             |
+
+Para contratos detallados, artefactos y transiciones, continuar leyendo.
 
 ## Pipeline operativo
 
@@ -593,10 +613,12 @@ Mitigación:
 - El sistema es multi-proyecto con estado híbrido.
 - Los comandos del MVP son solo: `create`, `derive`, `validate`, `review`, `checkpoint`, `wizard`.
 
-## Decisiones pendientes
+## Decisiones diferidas a v2
 
-- shape extendido del contrato YAML por encima del mínimo obligatorio;
-- límites entre configuración global y configuración por proyecto.
+- Shape extendido del contrato YAML por encima del mínimo obligatorio.
+  v1 usa el shape mínimo documentado en la sección de contratos.
+- Límites entre configuración global y configuración por proyecto.
+  v1 no define configuración por proyecto. Solo global (`~/.plan_dope/config/`).
 
 ## Riesgos residuales
 
