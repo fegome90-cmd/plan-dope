@@ -1,6 +1,6 @@
 # plan_dope
 
-CLI para generar, validar y revisar planes técnicos de desarrollo.
+CLI para la planificación supervisada de desarrollo técnico.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
@@ -10,9 +10,12 @@ CLI para generar, validar y revisar planes técnicos de desarrollo.
 
 ## Purpose
 
-`plan_dope` produce planes técnicos legibles, validables y transferibles. Mantiene al humano como autor y criterio final (`plan.md`), mientras el sistema se encarga de derivar estructura YAML, validar consistencia, revisar calidad y producir handoffs para transferencia de contexto.
+`plan_dope` es un CLI de planificación supervisada donde el humano
+trabaja sobre `plan.md`, y el sistema deriva estructura YAML, valida
+consistencia, revisa calidad y produce handoffs transferibles.
 
-**No ejecuta trabajo técnico.** Su función es producir artefactos de planificación que otros sistemas consumen.
+**No ejecuta trabajo técnico.** Produce artefactos de planificación que
+otros sistemas consumen. El humano es autor y criterio final en cada ciclo.
 
 ## Installation
 
@@ -80,43 +83,19 @@ All commands (except `completion`) support the following option:
 
 ## Architecture
 
-### Plan Lifecycle
+See [ARCHITECTURE-v1.md](./ARCHITECTURE-v1.md) for full details.
 
-```
-DRAFT → DERIVED → VALIDATED → REVIEWED → HANDOFF_READY
-```
+**Core idea**: `plan.md` is the single source of truth. The system derives
+YAML, validates structure, reviews quality, and produces handoffs.
+Plans iterate: edit → re-derive → re-validate → re-review until ready.
 
-| State | Trigger |
+| State | Meaning |
 |-------|---------|
-| `DRAFT` | Initial state after `plan create` |
-| `DERIVED` | After `plan derive` produces `plan.yaml` |
-| `VALIDATED` | After `plan validate` passes |
-| `REVIEWED` | After `plan review` verdict is PASS or PASS_WITH_NOTES |
-| `HANDOFF_READY` | After `plan checkpoint` creates handoff artifact |
-
-### Artifact Structure
-
-All artifacts live in `_ctx/plans/<plan-id>/` within each target project:
-
-```
-my-project/
-├── _ctx/
-│   └── plans/
-│       └── my-feature/
-│           ├── plan.md              # Human-authored source of truth
-│           ├── plan.yaml            # Derived structured data
-│           ├── validation-report.yaml
-│           ├── review-report.md
-│           └── .state.json          # Current lifecycle state
-```
-
-### Key Principles
-
-- **`plan.md` is the single source of truth.** YAML is derived. If conflict, Markdown wins.
-- **Fingerprint coherency.** Every derived artifact carries a SHA-256 fingerprint of its source. Mismatches are detected and rejected.
-- **Drift detection.** If `plan.md` changes after derivation, the system archives stale plan.yaml, validation-report.yaml, and review-report.md to `history/` and resets to `DRAFT`. Checkpoints are not archived (v1 limitation).
-- **Multi-project.** Operates on `cwd` by default; `--project <path>` overrides explicitly.
-- **No execution.** Plans are consumed externally — the CLI produces, it does not run.
+| `DRAFT` | Plan in progress |
+| `DERIVED` | YAML generated |
+| `VALIDATED` | YAML verified |
+| `REVIEWED` | Review passed |
+| `HANDOFF_READY` | Checkpoint emitted |
 
 ## Development
 
@@ -163,14 +142,8 @@ npm start -- --help
 
 ## Configuration
 
-Global config lives at `~/.plan_dope/config/config.yml`. Per-project overrides via `.plan_dope.yml` in the project root.
-
-```yaml
-# ~/.plan_dope/config/config.yml
-artifacts_base_path: _ctx
-auto_derive: false
-default_handoff_reason: transfer
-```
+Global config at `~/.plan_dope/config/config.yml`. See
+[ARCHITECTURE-v1.md](./ARCHITECTURE-v1.md) for configuration details.
 
 ## Shell Completions
 
