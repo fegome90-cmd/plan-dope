@@ -69,9 +69,17 @@ npx tsx src/index.ts checkpoint --plan-id my-feature
 | `plan derive` | Derive `plan.yaml` from `plan.md` | `--plan-id <plan-id>`, `--project <path>` |
 | `plan validate` | Validate `plan.yaml` and produce report | `--plan-id <plan-id>`, `--project <path>` |
 | `plan review` | Structural review: checks coherence, fingerprints, and completeness | `--plan-id <plan-id>`, `--project <path>` |
-| `plan checkpoint` | Create handoff artifact | `--plan-id <plan-id>`, `--project <path>`, `--reason <pause\|transfer\|completion>` |
+| `plan observe` | Agrega notas manuscritas o correcciones formales referenciando hallazgos | `[plan-id]`, `--comment <text>`, `--correct <text>`, `--finding <ref>` |
+| `plan close` | Sella la iteración actual moviéndola a `/history` | `[plan-id]` |
+| `plan checkpoint` | Exporta un nodo de entrega (handoff). Fuera del alcance efectivo de Fase B v1. | `--plan-id <plan-id>`, `--project <path>`, `--reason <pause\|transfer\|completion>` |
 | `plan wizard` | Interactive pipeline: create → derive → validate → review → checkpoint | `--project <path>` |
 | `plan completion` | Generate shell completion script | `<bash\|zsh\|fish>` |
+
+> **Nota de Diseño v1 (Compatibilidad vs. Ergonomía)**:
+> Por cuestiones histórico-ergonómicas del CLI actual:
+> - Los comandos automáticos `create`/`derive`/`validate`/`review` /`checkpoint` requieren bandera estricta `--plan-id` o `--id`.
+> - Los comandos interactivos-humanos `observe` y `close` toleran ID posicional (`plan close <id>`).
+> - Los directorios `history/cycle-<N>/` albergan una versión inmutable transaccional *por contrato semántico de comandos*, sin mecanismos restrictivos a nivel low-level de filesystem o permisos OS.
 
 ### Common Options
 

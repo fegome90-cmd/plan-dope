@@ -15,8 +15,30 @@ export interface PlanMetadata {
   created_at: string;
   updated_at: string;
   state: PlanState;
+  cycle_index?: number;
   source_md_path?: string;
   source_md_fingerprint?: string;
+}
+
+// ==========================================
+// Fase B: MVP Plan Vivo - Tipos de Ciclo
+// ==========================================
+
+/**
+ * Referencia inmutable a un hallazgo de un ciclo específico.
+ * Formato oblilgatorio: `<run-id>:<finding-code>`
+ */
+export type FindingRef = `${string}:${string}`;
+
+/**
+ * Metadata inmutable guardada en history/cycle-<N>/meta.json
+ */
+export interface CycleMeta {
+  cycle_index: number;
+  closed_at: string;
+  plan_md_fingerprint: string;
+  final_verdict: ReviewVerdict;
+  review_run_id: string;
 }
 
 // Shape mínimo de plan.yaml según ARCHITECTURE-v1.md
@@ -82,6 +104,7 @@ export interface ReviewReport {
 }
 
 export interface Finding {
+  id: string; // e.g. "F-01"
   severity: 'critical' | 'warning' | 'suggestion';
   category: string;
   description: string;

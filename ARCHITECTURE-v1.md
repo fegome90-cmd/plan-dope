@@ -16,8 +16,9 @@ Para una lectura rápida del MVP:
 | Handoff          | `checkpoint` (artefacto, delega a `checkpoint-card`)          |
 | Fuente de verdad | `plan.md` (Markdown)                                          |
 | Derivado         | `plan.yaml` (YAML)                                            |
+| Ciclo de Vida    | Iteración revisada (sellada con `plan close`)                 |
 | Estados          | `DRAFT → DERIVED → VALIDATED → REVIEWED → HANDOFF_READY`     |
-| Comandos         | `create`, `derive`, `validate`, `review`, `checkpoint`, `wizard` |
+| Comandos         | `create`, `derive`, `validate`, `review`, `checkpoint`, `wizard`, `observe`, `close` |
 | Convención       | `_ctx/`                                                       |
 | Ejecución        | Fuera del core v1                                             |
 
@@ -102,7 +103,17 @@ En v1 **no existe un registro global obligatorio de proyectos**. El estado globa
     │       ├── plan.md
     │       ├── plan.yaml
     │       ├── validation-report.yaml
-    │       └── review-report.md
+    │       ├── review-report.md
+    │       ├── observations.md             (efímero)
+    │       ├── corrections-log.md          (efímero)
+    │       ├── .state.json                 (contiene cycle_index)
+    │       └── history/
+    │           └── cycle-<N>/
+    │               ├── plan.md
+    │               ├── plan.yaml
+    │               ├── validation-report.yaml
+    │               ├── review-report.md
+    │               └── meta.json
     └── review_runs/
         └── <run-id>/
             ├── input-ref.yaml
@@ -296,7 +307,33 @@ Contrato:
 - `review_runs/` conserva evidencia y detalle de ejecución, pero no redefine por sí mismo el estado vigente del plan;
 - `review-report.md` debe referenciar inequívocamente el `run-id` del que proviene.
 
-### 4.1 `_ctx/review_runs/<run-id>/`
+### Contrato de Referencia de Hallazgos (`finding_ref`)
+
+Para evitar referencias huérfanas o ambiguas, toda corrección u observación sobre un hallazgo debe usar el formato obligatorio:
+- `<run-id>:<finding-code>` (ejemplo: `run-abc123:F-02`).
+- El `<run-id>` pertenece al `review-report.md` vigente en el ciclo. El `<finding-code>` debe existir como clave o ID dentro de ese reporte.
+
+### 5. Artefactos de Ciclo de Vida (Fase B: MVP Plan Vivo)
+
+La memoria documental define un "ciclo" como una **iteración revisada** (feedback loop completado).
+
+#### Contrato `observations.md`
+- **Autoría**: 100% humana (manual). Ni `plan review` ni ningún otro comando escriben automáticamente aquí.
+- **Propósito**: Bitácora del humano para anotar planes de acción o dudas durante el ciclo.
+- **Ciclo de vida**: Limpiado y rotado a `history/cycle-<N>/` al hacer `plan close`.
+
+#### Contrato `corrections-log.md`
+- **Autoría**: Humana, asistida sintácticamente a través del flag `--correct` de CLI para no fallar formato.
+- **Propósito**: Vincular una edición semántica a un hallazgo (`finding_ref`).
+- **Aspecto exigido**:
+  `<!-- correction: <timestamp> | fingerprint_before: <hash> | finding: <run-id>:<finding-id> -->`
+- **Ciclo de vida**: Limpiado y rotado a `history/cycle-<N>/` al hacer `plan close`.
+
+#### Contrato `history/cycle-<N>/meta.json`
+- **Propósito**: Sello estructural inmutable del cierre de ciclo.
+- **Contiene**: `cycle_index`, `closed_at`, `plan_md_fingerprint`, `final_verdict`, `review_run_id`.
+
+### 5.1 `_ctx/review_runs/<run-id>/`
 
 Artefactos de historial del pipeline de review.
 
@@ -312,7 +349,7 @@ Contrato:
 - no reemplazan a `review-report.md` como superficie vigente del plan;
 - sirven para trazabilidad, auditoría y reconstrucción del review aplicado.
 
-### 5. Veredicto de review
+### 6. Veredicto de review
 
 El review usa una taxonomy explícita y cerrada:
 
@@ -327,7 +364,7 @@ Contrato:
 - `FAIL` devuelve el plan a `DRAFT`;
 - no existe un estado separado de `APPROVED` en v1.
 
-### 6. Mapeo veredicto → transición de estado
+### 7. Mapeo veredicto → transición de estado
 
 | Veredicto de review | Estado resultante del plan | Efecto |
 |---|---|---|
@@ -335,7 +372,7 @@ Contrato:
 | `PASS_WITH_NOTES` | `REVIEWED` | el plan puede emitir handoff con observaciones |
 | `FAIL` | `DRAFT` | el plan debe corregirse y volver a derivarse/validarse/revisarse |
 
-### 7. Checkpoint card
+### 8. Checkpoint card
 
 El checkpoint de v1 se materializa usando la skill existente **`checkpoint-card`**.
 
@@ -472,6 +509,23 @@ Responsabilidad:
 - orquestar interactivamente `create`, `derive`, `validate`, `review` y `checkpoint`;
 - reutilizando el mismo core.
 
+### `plan observe`
+
+Responsabilidad:
+
+- asistir la redacción manual de anotaciones;
+- agregar entradas a `observations.md` (`--comment`);
+- agregar entradas a `corrections-log.md` referenciando un hallazgo (`--correct`, `--finding <run-id>:<id>`).
+
+### `plan close`
+
+Responsabilidad:
+
+- sellar la iteración de feedback documental (el ciclo humano-plan);
+- fallar rotundamente si el estado no es `REVIEWED` o `HANDOFF_READY`;
+- rotar de forma inmutable el core documental hacia `history/cycle-<N>`;
+- incrementar el `cycle_index` de forma opaca y monotónica en `.state.json` limpiando las superficies efímeras.
+
 ### Comandos explícitamente fuera de contrato en v1
 
 - `plan execute`
@@ -509,7 +563,8 @@ VALIDATED
   └─(plan review: FAIL)──────────────────────────▶ DRAFT
 
 REVIEWED
-  └─(plan checkpoint: pause | transfer | completion)────▶ HANDOFF_READY
+  └─(plan close)─────────────────────────────────▶ DRAFT
+  └─(plan checkpoint: pause | transfer | ...)────▶ HANDOFF_READY
 ```
 
 Transiciones de retroceso:

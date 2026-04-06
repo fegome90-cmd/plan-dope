@@ -8,6 +8,7 @@ interface StateFile {
   state: PlanState;
   created_at: string;
   updated_at: string;
+  cycle_index?: number;
 }
 
 const VALID_TRANSITIONS: Record<PlanState, PlanState[]> = {
@@ -18,7 +19,7 @@ const VALID_TRANSITIONS: Record<PlanState, PlanState[]> = {
   HANDOFF_READY: ['DRAFT'],
 };
 
-const VALID_STATES: PlanState[] = ['DRAFT', 'DERIVED', 'VALIDATED', 'REVIEWED', 'HANDOFF_READY'];
+const VALID_STATES: PlanState[] = Object.keys(VALID_TRANSITIONS) as PlanState[];
 
 function isValidPlanState(state: unknown): state is PlanState {
   return typeof state === 'string' && VALID_STATES.includes(state as PlanState);
@@ -59,6 +60,9 @@ export function readState(planDir: string): StateFile {
     }
     if (typeof parsed.plan_id !== 'string') {
       throw new Error('Missing or invalid plan_id');
+    }
+    if (parsed.cycle_index !== undefined && typeof parsed.cycle_index !== 'number') {
+      throw new Error('Invalid cycle_index: expected number');
     }
     return parsed as StateFile;
   } catch (e) {

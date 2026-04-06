@@ -42,6 +42,33 @@ export function registerCommands(program: Command): void {
     });
 
   program
+    .command('observe')
+    .description('Añade observaciones y registros de corrección al plan activo')
+    .argument('[plan-id]', 'El ID del plan. Si se omite, busca el plan único del repositorio.')
+    .option('-c, --comment <texto>', 'Añade un comentario a observations.md')
+    .option('-r, --correct <texto>', 'Añade un registro de corrección a corrections-log.md')
+    .option(
+      '-f, --finding <ref>',
+      'Referencia a un hallazgo de review en formato namespaceado (e.g., run-abc123:F-01). Solo válido con --correct'
+    )
+    .action(async (planIdStr, opts) => {
+      const { observeCommand } = await import('./commands/observe.js');
+      observeCommand({ ...opts, planId: planIdStr });
+    });
+
+  program
+    .command('close')
+    .description('Sella el ciclo actual de revisión y crea un snapshot inmutable en el historial')
+    .argument(
+      '[plan-id]',
+      'El ID del plan a cerrar. Si se omite, busca el plan único del repositorio.'
+    )
+    .action(async (planIdStr, opts) => {
+      const { closeCommand } = await import('./commands/close.js');
+      closeCommand({ ...opts, planId: planIdStr });
+    });
+
+  program
     .command('checkpoint')
     .description('Delegar a checkpoint-card para producir handoff')
     .option('-p, --project <path>', 'Path del proyecto target')
