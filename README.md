@@ -87,7 +87,7 @@ See [ARCHITECTURE-v1.md](./ARCHITECTURE-v1.md) for full details.
 
 **Core idea**: `plan.md` is the single source of truth. The system derives
 YAML, validates structure, reviews quality, and produces handoffs.
-Plans iterate: edit → re-derive → re-validate → re-review until ready.
+Each pipeline stage is re-runnable as the plan evolves.
 
 | State | Meaning |
 |-------|---------|
@@ -163,3 +163,4 @@ plan completion fish > ~/.config/fish/completions/plan.fish
 ## License
 
 MIT
+
