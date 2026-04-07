@@ -5,7 +5,7 @@ CLI para la planificación supervisada de desarrollo técnico.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-ESM-green.svg)](https://nodejs.org/)
-![Tests](https://img.shields.io/badge/Tests-74%2F74-brightgreen.svg)
+![Tests](https://img.shields.io/badge/Tests-87%2F87-brightgreen.svg)
 [![Biome](https://img.shields.io/badge/code%20style-biome-60a5fa.svg)](https://biomejs.dev/)
 
 ## Purpose
