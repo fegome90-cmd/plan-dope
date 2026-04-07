@@ -38,7 +38,7 @@ afterEach(() => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
     } catch {
-      // cleanup
+      // Ignore cleanup errors in test teardown
     }
   }
 });

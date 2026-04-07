@@ -1,9 +1,18 @@
 import { execSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { closePlanCycle } from '../src/core/close.js';
 import { createCheckpoint } from '../src/core/checkpoint.js';
 import {
   readGlobalConfig,
@@ -657,5 +666,84 @@ describe('state transitions', () => {
     const state = readState(planDir);
     expect(state.state).toBe('DRAFT');
     expect(state.plan_id).toBe('unknown');
+  });
+});
+
+async function setupReviewedPlan(tmpDir: string, id: string): Promise<string> {
+  await createPlan(tmpDir, id);
+  await derivePlan(tmpDir, id);
+  await validatePlan(tmpDir, id);
+  await reviewPlan(tmpDir, id);
+  return id;
+}
+
+describe('closePlanCycle - legacy fallback', () => {
+  it('parses review-report.md via regex when summary.json is missing', async () => {
+    const id = await setupReviewedPlan(tmpDir, 'close-legacy-happy');
+
+    // Resolve run-id dynamically from review_runs directory
+    const reviewRunsDir = join(tmpDir, '_ctx', 'review_runs');
+    const runDirs = readdirSync(reviewRunsDir);
+    expect(runDirs.length).toBeGreaterThan(0);
+    const runId = runDirs[0];
+
+    // Delete summary.json to force legacy fallback path
+    const summaryPath = join(reviewRunsDir, runId, 'summary.json');
+    expect(existsSync(summaryPath)).toBe(true);
+    rmSync(summaryPath);
+
+    // Close the plan — should use regex fallback
+    const cycleDir = await closePlanCycle(tmpDir, id);
+
+    // Verify meta.json was created with regex-parsed values
+    const meta = JSON.parse(readFileSync(join(cycleDir, 'meta.json'), 'utf-8'));
+    expect(meta.review_run_id).toBe(runId);
+    expect(meta.review_run_id).not.toBe('unknown');
+    expect(meta.plan_md_fingerprint).not.toBe('unknown');
+    expect(['PASS', 'PASS_WITH_NOTES', 'FAIL']).toContain(meta.final_verdict);
+  });
+
+  it('defaults fingerprint and verdict when review-report.md has partial fields', async () => {
+    const id = 'close-legacy-partial';
+    await createPlan(tmpDir, id);
+    await derivePlan(tmpDir, id);
+    await validatePlan(tmpDir, id);
+    await reviewPlan(tmpDir, id);
+
+    const planDir = getPlanDir(tmpDir, id);
+
+    // Overwrite review-report.md with partial table (only Run ID, no Verdict/Fingerprint)
+    const partialReport = [
+      '# Review Report: close-legacy-partial',
+      '',
+      '## Summary',
+      '',
+      '| Field | Value |',
+      '|-------|-------|',
+      '| Run ID | review-partial-001 |',
+      '',
+    ].join('\n');
+    writeFileSync(join(planDir, 'review-report.md'), partialReport, 'utf-8');
+
+    // No summary.json exists for this fabricated run-id, so fallback triggers
+    const cycleDir = await closePlanCycle(tmpDir, id);
+    const meta = JSON.parse(readFileSync(join(cycleDir, 'meta.json'), 'utf-8'));
+
+    expect(meta.review_run_id).toBe('review-partial-001');
+    expect(meta.plan_md_fingerprint).toBe('unknown');
+    expect(meta.final_verdict).toBe('PASS');
+  });
+
+  it('throws when summary.json exists but is corrupt', async () => {
+    const id = await setupReviewedPlan(tmpDir, 'close-legacy-corrupt');
+
+    const reviewRunsDir = join(tmpDir, '_ctx', 'review_runs');
+    const runDirs = readdirSync(reviewRunsDir);
+    const summaryPath = join(reviewRunsDir, runDirs[0], 'summary.json');
+
+    // Corrupt the summary.json
+    writeFileSync(summaryPath, '{bad', 'utf-8');
+
+    await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(/exists but is corrupt/);
   });
 });

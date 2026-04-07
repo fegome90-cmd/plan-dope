@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse, stringify } from 'yaml';
-import type { Finding, ReviewVerdict } from '../types/index.js';
+import type { Finding, ReviewVerdict, ValidationReport } from '../types/index.js';
 import { resolveArtifactsBasePath } from './config.js';
 import { fingerprint, verifyFingerprintCoherency } from './derive.js';
 import { findPlanId, getPlanDir } from './resolver.js';
@@ -47,64 +47,8 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
 
   const runId = `review-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
-  const findings: Finding[] = [];
-  let findingCounter = 1;
-
-  // If validation failed, that's a critical finding
-  if (validationReport.status === 'invalid') {
-    for (const error of validationReport.errors || []) {
-      findings.push({
-        id: `F-${findingCounter.toString().padStart(2, '0')}`,
-        severity: 'critical',
-        category: 'validation',
-        description: `Validation error: ${error.field} — ${error.message}`,
-      });
-      findingCounter++;
-    }
-  }
-
-  // Add warnings as findings
-  for (const warning of validationReport.warnings || []) {
-    findings.push({
-      id: `F-${findingCounter.toString().padStart(2, '0')}`,
-      severity: 'warning',
-      category: 'validation',
-      description: warning,
-    });
-    findingCounter++;
-  }
-
-  // Structural review checks
-  if (
-    !planContent.includes('## Purpose') ||
-    planContent.includes('<!-- Describe what this plan is about -->')
-  ) {
-    findings.push({
-      id: `F-${findingCounter.toString().padStart(2, '0')}`,
-      severity: 'warning',
-      category: 'completeness',
-      description: 'Purpose section appears to be a template placeholder',
-    });
-    findingCounter++;
-  }
-
-  if (!planContent.includes('## Phases') || planContent.includes('<!-- name -->')) {
-    findings.push({
-      id: `F-${findingCounter.toString().padStart(2, '0')}`,
-      severity: 'warning',
-      category: 'completeness',
-      description: 'Phases section appears to be a template placeholder',
-    });
-    findingCounter++;
-  }
-
-  // Determine verdict
-  const hasCritical = findings.some((f) => f.severity === 'critical');
-  const verdict: ReviewVerdict = hasCritical
-    ? 'FAIL'
-    : findings.length > 0
-      ? 'PASS_WITH_NOTES'
-      : 'PASS';
+  const findings = collectFindings(validationReport, planContent);
+  const verdict = determineVerdict(findings);
 
   const report = {
     run_id: runId,
@@ -149,12 +93,6 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
     reviewed_at: now(),
   };
   writeFileSync(join(reviewRunsDir, 'summary.json'), JSON.stringify(summaryJson, null, 2), 'utf-8');
-  writeFileSync(join(reviewRunsDir, 'findings.yaml'), stringify(findings), 'utf-8');
-  writeFileSync(
-    join(reviewRunsDir, 'summary.md'),
-    `Verdict: ${verdict}\nFindings: ${findings.length}\n`,
-    'utf-8'
-  );
 
   // Update state based on verdict
   if (verdict === 'FAIL') {
@@ -206,4 +144,42 @@ None
 
 ${report.notes.map((n) => `- ${n}`).join('\n')}
 `;
+}
+
+function collectFindings(validationReport: ValidationReport, planContent: string): Finding[] {
+  const findings: Omit<Finding, 'id'>[] = [];
+
+  const addCritical = (desc: string) =>
+    findings.push({ severity: 'critical', category: 'validation', description: desc });
+  const addWarning = (cat: Finding['category'], desc: string) =>
+    findings.push({ severity: 'warning', category: cat, description: desc });
+
+  if (validationReport.status === 'invalid') {
+    for (const error of validationReport.errors || []) {
+      addCritical(`Validation error: ${error.field} — ${error.message}`);
+    }
+  }
+
+  for (const warning of validationReport.warnings || []) {
+    addWarning('validation', warning);
+  }
+
+  if (
+    !planContent.includes('## Purpose') ||
+    planContent.includes('<!-- Describe what this plan is about -->')
+  ) {
+    addWarning('completeness', 'Purpose section appears to be a template placeholder');
+  }
+
+  if (!planContent.includes('## Phases') || planContent.includes('<!-- name -->')) {
+    addWarning('completeness', 'Phases section appears to be a template placeholder');
+  }
+
+  return findings.map((f, idx) => ({ ...f, id: `F-${(idx + 1).toString().padStart(2, '0')}` }));
+}
+
+function determineVerdict(findings: Finding[]): ReviewVerdict {
+  if (findings.some((f) => f.severity === 'critical')) return 'FAIL';
+  if (findings.length > 0) return 'PASS_WITH_NOTES';
+  return 'PASS';
 }
