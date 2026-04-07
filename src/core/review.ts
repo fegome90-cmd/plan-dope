@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parse, stringify } from 'yaml';
+import { parse } from 'yaml';
 import type { Finding, ReviewVerdict, ValidationReport } from '../types/index.js';
 import { resolveArtifactsBasePath } from './config.js';
 import { fingerprint, verifyFingerprintCoherency } from './derive.js';
@@ -74,12 +74,6 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
   writeFileSync(
     join(reviewRunsDir, 'input-ref.yaml'),
     `plan_id: ${id}\nplan_md_fingerprint: ${planFp}\n`,
-    'utf-8'
-  );
-  writeFileSync(join(reviewRunsDir, 'findings.yaml'), stringify(findings), 'utf-8');
-  writeFileSync(
-    join(reviewRunsDir, 'summary.md'),
-    `Verdict: ${verdict}\nFindings: ${findings.length}\n`,
     'utf-8'
   );
 
