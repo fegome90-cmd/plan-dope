@@ -117,8 +117,7 @@ En v1 **no existe un registro global obligatorio de proyectos**. El estado globa
     └── review_runs/
         └── <run-id>/
             ├── input-ref.yaml
-            ├── findings.yaml
-            └── summary.md
+            └── summary.json
     └── checkpoints/
         └── YYYY-MM-DD/
             └── checkpoint_HHMMSS_<name>.md
