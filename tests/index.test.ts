@@ -17,7 +17,7 @@ import { checkAndInvalidateDrift, derivePlan, fingerprint } from '../src/core/de
 import { isGitRepo } from '../src/core/git.js';
 import { findPlanId, getPlanDir, resolveProjectRoot } from '../src/core/resolver.js';
 import { reviewPlan } from '../src/core/review.js';
-import { closePlanCycle } from '../src/core/close.js';
+
 import { readState, validateStateTransition } from '../src/core/state.js';
 import { validatePlan } from '../src/core/validate.js';
 import type { DriftOutcome } from '../src/types/index.js';
@@ -727,4 +727,55 @@ describe('reviewPlan - type guard tests', () => {
       /corrupt|structure|errors/
     );
   });
+});
+
+// Additional type guard tests for reviewPlan (edge-case scenarios)
+it('reviewPlan type guard test - scenario 1.1: missing plan_yaml_fingerprint', async () => {
+  await createPlan(tmpDir, 'guard-1-1');
+  await derivePlan(tmpDir, 'guard-1-1');
+  await validatePlan(tmpDir, 'guard-1-1');
+  const planDir = getPlanDir(tmpDir, 'guard-1-1');
+  const vPath = join(planDir, 'validation-report.yaml');
+  const content = readFileSync(vPath, 'utf-8');
+  const lines = content.split('\n').filter((l) => !l.includes('plan_yaml_fingerprint:'));
+  writeFileSync(vPath, lines.join('\n'), 'utf-8');
+  await expect(reviewPlan(tmpDir, 'guard-1-1')).rejects.toThrow(
+    /corrupt|structure|plan_yaml_fingerprint/
+  );
+});
+
+it('reviewPlan type guard test - scenario 1.2: errors contains string', async () => {
+  await createPlan(tmpDir, 'guard-1-2');
+  await derivePlan(tmpDir, 'guard-1-2');
+  await validatePlan(tmpDir, 'guard-1-2');
+  const planDir = getPlanDir(tmpDir, 'guard-1-2');
+  const vPath = join(planDir, 'validation-report.yaml');
+  const content = readFileSync(vPath, 'utf-8');
+  const newContent = content + '\nerrors:\n  - string-item';
+  writeFileSync(vPath, newContent, 'utf-8');
+  await expect(reviewPlan(tmpDir, 'guard-1-2')).rejects.toThrow(/corrupt|structure|errors/);
+});
+
+it('reviewPlan type guard test - scenario 1.3: errors element missing message', async () => {
+  await createPlan(tmpDir, 'guard-1-3');
+  await derivePlan(tmpDir, 'guard-1-3');
+  await validatePlan(tmpDir, 'guard-1-3');
+  const planDir = getPlanDir(tmpDir, 'guard-1-3');
+  const vPath = join(planDir, 'validation-report.yaml');
+  const content = readFileSync(vPath, 'utf-8');
+  const newContent = content + '\nerrors:\n  - field: scope';
+  writeFileSync(vPath, newContent, 'utf-8');
+  await expect(reviewPlan(tmpDir, 'guard-1-3')).rejects.toThrow(/corrupt|structure|errors/);
+});
+
+it('reviewPlan type guard test - scenario 1.4: warnings contains non-string', async () => {
+  await createPlan(tmpDir, 'guard-1-4');
+  await derivePlan(tmpDir, 'guard-1-4');
+  await validatePlan(tmpDir, 'guard-1-4');
+  const planDir = getPlanDir(tmpDir, 'guard-1-4');
+  const vPath = join(planDir, 'validation-report.yaml');
+  const content = readFileSync(vPath, 'utf-8');
+  const newContent = content + '\nwarnings:\n  - one\n  - 2';
+  writeFileSync(vPath, newContent, 'utf-8');
+  await expect(reviewPlan(tmpDir, 'guard-1-4')).rejects.toThrow(/corrupt|structure|warnings/);
 });
