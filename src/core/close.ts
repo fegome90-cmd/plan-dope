@@ -6,7 +6,7 @@ import { findPlanId, getPlanDir } from './resolver.js';
 import { readState } from './state.js';
 import { now } from './utils.js';
 
-const REVIEW_VERDICTS: readonly string[] = ['PASS', 'PASS_WITH_NOTES', 'FAIL'];
+const REVIEW_VERDICTS: readonly ReviewVerdict[] = ['PASS', 'PASS_WITH_NOTES', 'FAIL'];
 
 interface ReviewSummary {
   run_id: string;
@@ -54,19 +54,28 @@ export async function closePlanCycle(projectRoot: string, planId?: string): Prom
           typeof parsed !== 'object' ||
           !('run_id' in parsed) ||
           typeof parsed.run_id !== 'string' ||
+          !('plan_id' in parsed) ||
+          typeof parsed.plan_id !== 'string' ||
           !('verdict' in parsed) ||
           typeof parsed.verdict !== 'string' ||
-          !REVIEW_VERDICTS.includes(parsed.verdict) ||
+          !REVIEW_VERDICTS.includes(parsed.verdict as ReviewVerdict) ||
           !('plan_md_fingerprint' in parsed) ||
-          typeof parsed.plan_md_fingerprint !== 'string'
+          typeof parsed.plan_md_fingerprint !== 'string' ||
+          !('reviewed_at' in parsed) ||
+          typeof parsed.reviewed_at !== 'string'
         ) {
           throw new Error(
             `summary.json for run '${runId}' has invalid shape. ` +
-              `Required: run_id (string), verdict (${REVIEW_VERDICTS.join(' | ')}), plan_md_fingerprint (string). ` +
+              `Required: run_id, plan_id, verdict (${REVIEW_VERDICTS.join(' | ')}), plan_md_fingerprint, reviewed_at (all strings). ` +
               `Cannot close plan.`
           );
         }
         summary = parsed as ReviewSummary;
+        if (summary.run_id !== runId) {
+          throw new Error(
+            `summary.json run_id '${summary.run_id}' does not match expected run '${runId}'. Cannot close plan.`
+          );
+        }
       } catch (err) {
         if (err instanceof Error && err.message.startsWith('summary.json for run')) {
           throw err;
@@ -85,7 +94,7 @@ export async function closePlanCycle(projectRoot: string, planId?: string): Prom
         );
       }
       const verdict = verdictMatch[1].trim();
-      if (!REVIEW_VERDICTS.includes(verdict)) {
+      if (!REVIEW_VERDICTS.includes(verdict as ReviewVerdict)) {
         throw new Error(
           `Invalid verdict '${verdict}' in review-report.md. ` +
             `Expected one of: ${REVIEW_VERDICTS.join(', ')}. Cannot close plan.`

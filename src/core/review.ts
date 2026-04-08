@@ -11,16 +11,37 @@ import { now } from './utils.js';
 function isValidationReport(v: unknown): v is ValidationReport {
   if (typeof v !== 'object' || v === null) return false;
   const rec = v as Record<string, unknown>;
-  return (
-    'plan_id' in rec &&
-    typeof rec.plan_id === 'string' &&
-    'status' in rec &&
-    (rec.status === 'valid' || rec.status === 'invalid') &&
-    'errors' in rec &&
-    Array.isArray(rec.errors) &&
-    'warnings' in rec &&
-    Array.isArray(rec.warnings)
-  );
+  if (
+    !('plan_id' in rec) ||
+    typeof rec.plan_id !== 'string' ||
+    !('plan_yaml_fingerprint' in rec) ||
+    typeof rec.plan_yaml_fingerprint !== 'string' ||
+    !('validated_at' in rec) ||
+    typeof rec.validated_at !== 'string' ||
+    !('status' in rec) ||
+    (rec.status !== 'valid' && rec.status !== 'invalid') ||
+    !('errors' in rec) ||
+    !Array.isArray(rec.errors) ||
+    !('warnings' in rec) ||
+    !Array.isArray(rec.warnings)
+  ) {
+    return false;
+  }
+  // Validate element shapes: errors must be { field: string, message: string }
+  const errorsAreValid = rec.errors.every((e: unknown) => {
+    if (typeof e !== 'object' || e === null) return false;
+    const err = e as Record<string, unknown>;
+    return (
+      'field' in err &&
+      typeof err.field === 'string' &&
+      'message' in err &&
+      typeof err.message === 'string'
+    );
+  });
+  if (!errorsAreValid) return false;
+  // Validate element shapes: warnings must be strings
+  if (!rec.warnings.every((w: unknown) => typeof w === 'string')) return false;
+  return true;
 }
 
 export async function reviewPlan(projectRoot: string, planId?: string): Promise<string> {
@@ -54,15 +75,9 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
 
   // Verify validation-report corresponds to current plan.yaml
   const yamlFp = fingerprint(yamlContent);
-  const validationYamlFp = validationReport.plan_yaml_fingerprint as string | undefined;
-  if (!validationYamlFp) {
+  if (validationReport.plan_yaml_fingerprint !== yamlFp) {
     throw new Error(
-      'validation-report.yaml missing plan_yaml_fingerprint; re-run `plan validate`.'
-    );
-  }
-  if (validationYamlFp !== yamlFp) {
-    throw new Error(
-      `validation-report.yaml is stale (fingerprint ${validationYamlFp}) and does not match current plan.yaml (${yamlFp}). Re-run \`plan validate\`.`
+      `validation-report.yaml is stale (fingerprint ${validationReport.plan_yaml_fingerprint}) and does not match current plan.yaml (${yamlFp}). Re-run \`plan validate\`.`
     );
   }
 
@@ -170,17 +185,11 @@ function collectFindings(validationReport: ValidationReport, planContent: string
     findings.push({ severity: 'warning', category: cat, description: desc });
 
   if (validationReport.status === 'invalid') {
-    if (!Array.isArray(validationReport.errors)) {
-      throw new Error('validation-report.yaml has invalid errors field. Re-run `plan validate`.');
-    }
     for (const error of validationReport.errors) {
       addCritical(`Validation error: ${error.field} — ${error.message}`);
     }
   }
 
-  if (!Array.isArray(validationReport.warnings)) {
-    throw new Error('validation-report.yaml has invalid warnings field. Re-run `plan validate`.');
-  }
   for (const warning of validationReport.warnings) {
     addWarning('validation', warning);
   }
