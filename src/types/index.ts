@@ -103,10 +103,12 @@ export interface ReviewReport {
   notes: string[];
 }
 
+export type FindingCategory = 'validation' | 'completeness' | 'structural' | 'consistency';
+
 export interface Finding {
   id: string; // e.g. "F-01"
   severity: 'critical' | 'warning' | 'suggestion';
-  category: string;
+  category: FindingCategory;
   description: string;
 }
 

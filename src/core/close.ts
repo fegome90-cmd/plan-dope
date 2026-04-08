@@ -6,6 +6,8 @@ import { findPlanId, getPlanDir } from './resolver.js';
 import { readState } from './state.js';
 import { now } from './utils.js';
 
+const REVIEW_VERDICTS: readonly ReviewVerdict[] = ['PASS', 'PASS_WITH_NOTES', 'FAIL'];
+
 interface ReviewSummary {
   run_id: string;
   plan_id: string;
@@ -46,8 +48,38 @@ export async function closePlanCycle(projectRoot: string, planId?: string): Prom
     if (existsSync(summaryPath)) {
       try {
         const raw = readFileSync(summaryPath, 'utf-8');
-        summary = JSON.parse(raw);
-      } catch {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          parsed === null ||
+          typeof parsed !== 'object' ||
+          !('run_id' in parsed) ||
+          typeof parsed.run_id !== 'string' ||
+          !('plan_id' in parsed) ||
+          typeof parsed.plan_id !== 'string' ||
+          !('verdict' in parsed) ||
+          typeof parsed.verdict !== 'string' ||
+          !REVIEW_VERDICTS.includes(parsed.verdict as ReviewVerdict) ||
+          !('plan_md_fingerprint' in parsed) ||
+          typeof parsed.plan_md_fingerprint !== 'string' ||
+          !('reviewed_at' in parsed) ||
+          typeof parsed.reviewed_at !== 'string'
+        ) {
+          throw new Error(
+            `summary.json for run '${runId}' has invalid shape. ` +
+              `Required: run_id, plan_id, verdict (${REVIEW_VERDICTS.join(' | ')}), plan_md_fingerprint, reviewed_at (all strings). ` +
+              `Cannot close plan.`
+          );
+        }
+        summary = parsed as ReviewSummary;
+        if (summary.run_id !== runId) {
+          throw new Error(
+            `summary.json run_id '${summary.run_id}' does not match expected run '${runId}'. Cannot close plan.`
+          );
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith('summary.json for run')) {
+          throw err;
+        }
         throw new Error(
           `summary.json for run '${runId}' exists but is corrupt. Cannot close plan.`
         );
@@ -55,12 +87,33 @@ export async function closePlanCycle(projectRoot: string, planId?: string): Prom
     } else {
       // Legacy path: parse review-report.md markdown table
       const verdictMatch = reviewContent.match(/\| Verdict \| \*\*(.*?)\*\* \|/);
+      if (!verdictMatch?.[1]?.trim()) {
+        throw new Error(
+          'Cannot extract Verdict from review-report.md. ' +
+            'Ensure the report contains a "| Verdict | **...** |" row. Cannot close plan.'
+        );
+      }
+      const verdict = verdictMatch[1].trim();
+      if (!REVIEW_VERDICTS.includes(verdict as ReviewVerdict)) {
+        throw new Error(
+          `Invalid verdict '${verdict}' in review-report.md. ` +
+            `Expected one of: ${REVIEW_VERDICTS.join(', ')}. Cannot close plan.`
+        );
+      }
+
       const fpMatch = reviewContent.match(/\| Plan Fingerprint \| (.*?) \|/);
+      if (!fpMatch?.[1]?.trim()) {
+        throw new Error(
+          'Cannot extract Plan Fingerprint from review-report.md. ' +
+            'Ensure the report contains a "| Plan Fingerprint | ... |" row. Cannot close plan.'
+        );
+      }
+
       summary = {
         run_id: runId,
         plan_id: id,
-        plan_md_fingerprint: fpMatch?.[1]?.trim() ?? 'unknown',
-        verdict: (verdictMatch?.[1]?.trim() as ReviewVerdict) || 'PASS',
+        plan_md_fingerprint: fpMatch[1].trim(),
+        verdict: verdict as ReviewVerdict,
         reviewed_at: now(),
       };
     }
@@ -73,16 +126,26 @@ export async function closePlanCycle(projectRoot: string, planId?: string): Prom
 
   mkdirSync(cycleDir, { recursive: true });
 
-  const filesToSnapshot = [
+  const requiredFiles = [
     'plan.md',
     'plan.yaml',
     'validation-report.yaml',
     'review-report.md',
-    'observations.md',
-    'corrections-log.md',
-  ];
+  ] as const;
 
-  for (const file of filesToSnapshot) {
+  const optionalFiles = ['observations.md', 'corrections-log.md'] as const;
+
+  for (const file of requiredFiles) {
+    const src = join(planDir, file);
+    if (!existsSync(src)) {
+      throw new Error(
+        `Required snapshot file '${file}' not found in plan directory. Cannot close plan.`
+      );
+    }
+    copyFileSync(src, join(cycleDir, file));
+  }
+
+  for (const file of optionalFiles) {
     const src = join(planDir, file);
     if (existsSync(src)) {
       copyFileSync(src, join(cycleDir, file));
