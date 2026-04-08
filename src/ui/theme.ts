@@ -12,12 +12,5 @@ export const CONTRAST = {
   foreground: 'white',
   secondary: 'gray',
   muted: 'dim',
-  faint: 'hidden',
+  faint: 'dim',
 } as const;
-
-export const SPACING = { section: 1, paddingX: 2 } as const;
-
-export const BOX_STYLE = {
-  section: 'round' as const,
-  outer: 'bold' as const,
-};

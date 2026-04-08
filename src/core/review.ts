@@ -8,6 +8,21 @@ import { findPlanId, getPlanDir } from './resolver.js';
 import { updateState } from './state.js';
 import { now } from './utils.js';
 
+function isValidationReport(v: unknown): v is ValidationReport {
+  if (typeof v !== 'object' || v === null) return false;
+  const rec = v as Record<string, unknown>;
+  return (
+    'plan_id' in rec &&
+    typeof rec.plan_id === 'string' &&
+    'status' in rec &&
+    (rec.status === 'valid' || rec.status === 'invalid') &&
+    'errors' in rec &&
+    Array.isArray(rec.errors) &&
+    'warnings' in rec &&
+    Array.isArray(rec.warnings)
+  );
+}
+
 export async function reviewPlan(projectRoot: string, planId?: string): Promise<string> {
   const artifactsBase = resolveArtifactsBasePath(projectRoot);
   const id = findPlanId(projectRoot, planId, artifactsBase);
@@ -23,7 +38,13 @@ export async function reviewPlan(projectRoot: string, planId?: string): Promise<
     throw new Error('validation-report.yaml not found. Run `plan validate` first.');
 
   const validationContent = readFileSync(validationPath, 'utf-8');
-  const validationReport = parse(validationContent);
+  const rawReport = parse(validationContent);
+  if (!isValidationReport(rawReport)) {
+    throw new Error(
+      'validation-report.yaml is corrupt or has invalid structure. Re-run `plan validate`.'
+    );
+  }
+  const validationReport: ValidationReport = rawReport;
 
   const planContent = readFileSync(planPath, 'utf-8');
   const planFp = fingerprint(planContent);
@@ -103,7 +124,7 @@ function generateReviewMarkdown(report: {
   plan_id: string;
   plan_md_fingerprint: string;
   reviewed_at: string;
-  verdict: string;
+  verdict: ReviewVerdict;
   findings: Finding[];
   notes: string[];
 }): string {
@@ -149,12 +170,18 @@ function collectFindings(validationReport: ValidationReport, planContent: string
     findings.push({ severity: 'warning', category: cat, description: desc });
 
   if (validationReport.status === 'invalid') {
-    for (const error of validationReport.errors || []) {
+    if (!Array.isArray(validationReport.errors)) {
+      throw new Error('validation-report.yaml has invalid errors field. Re-run `plan validate`.');
+    }
+    for (const error of validationReport.errors) {
       addCritical(`Validation error: ${error.field} — ${error.message}`);
     }
   }
 
-  for (const warning of validationReport.warnings || []) {
+  if (!Array.isArray(validationReport.warnings)) {
+    throw new Error('validation-report.yaml has invalid warnings field. Re-run `plan validate`.');
+  }
+  for (const warning of validationReport.warnings) {
     addWarning('validation', warning);
   }
 

@@ -195,6 +195,41 @@ describe('reviewPlan', () => {
     writeFileSync(planPath, `${readFileSync(planPath, 'utf-8')}\n# Modified after derive`, 'utf-8');
     await expect(reviewPlan(tmpDir, 'fp-mismatch-review')).rejects.toThrow('fingerprint mismatch');
   });
+
+  it('resets state to DRAFT and produces FAIL verdict on invalid validation report', async () => {
+    await createPlan(tmpDir, 'fail-verdict-test');
+    await derivePlan(tmpDir, 'fail-verdict-test');
+
+    // Manually write a validation-report.yaml with status: invalid and one error
+    const planDir = getPlanDir(tmpDir, 'fail-verdict-test');
+    const yamlContent = readFileSync(join(planDir, 'plan.yaml'), 'utf-8');
+    const yamlFp = fingerprint(yamlContent);
+    const validationReport = [
+      `plan_id: fail-verdict-test`,
+      `plan_yaml_fingerprint: ${yamlFp}`,
+      `validated_at: '2026-01-01T00:00:00Z'`,
+      `status: invalid`,
+      `errors:`,
+      `  - field: scope`,
+      `    message: "Missing required field: scope"`,
+      `warnings: []`,
+    ].join('\n');
+    writeFileSync(join(planDir, 'validation-report.yaml'), validationReport, 'utf-8');
+
+    // Set state to VALIDATED so review can proceed
+    const { updateState } = await import('../src/core/state.js');
+    updateState(planDir, 'VALIDATED');
+
+    await reviewPlan(tmpDir, 'fail-verdict-test');
+
+    // Verify state reset to DRAFT
+    const state = readState(planDir);
+    expect(state.state).toBe('DRAFT');
+
+    // Verify review-report.md contains FAIL verdict
+    const reportContent = readFileSync(join(planDir, 'review-report.md'), 'utf-8');
+    expect(reportContent).toContain('FAIL');
+  });
 });
 
 describe('createCheckpoint', () => {
@@ -703,8 +738,8 @@ describe('closePlanCycle - legacy fallback', () => {
     expect(['PASS', 'PASS_WITH_NOTES', 'FAIL']).toContain(meta.final_verdict);
   });
 
-  it('defaults fingerprint and verdict when review-report.md has partial fields', async () => {
-    const id = 'close-legacy-partial';
+  it('throws when review-report.md has no Verdict row in legacy fallback', async () => {
+    const id = 'close-legacy-no-verdict';
     await createPlan(tmpDir, id);
     await derivePlan(tmpDir, id);
     await validatePlan(tmpDir, id);
@@ -712,26 +747,51 @@ describe('closePlanCycle - legacy fallback', () => {
 
     const planDir = getPlanDir(tmpDir, id);
 
-    // Overwrite review-report.md with partial table (only Run ID, no Verdict/Fingerprint)
+    // Overwrite review-report.md with partial table (only Run ID, no Verdict)
     const partialReport = [
-      '# Review Report: close-legacy-partial',
+      '# Review Report: close-legacy-no-verdict',
       '',
       '## Summary',
       '',
       '| Field | Value |',
       '|-------|-------|',
-      '| Run ID | review-partial-001 |',
+      '| Run ID | review-no-verdict-001 |',
+      '| Plan Fingerprint | abc123 |',
       '',
     ].join('\n');
     writeFileSync(join(planDir, 'review-report.md'), partialReport, 'utf-8');
 
-    // No summary.json exists for this fabricated run-id, so fallback triggers
-    const cycleDir = await closePlanCycle(tmpDir, id);
-    const meta = JSON.parse(readFileSync(join(cycleDir, 'meta.json'), 'utf-8'));
+    await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(
+      /Cannot extract Verdict from review-report.md/
+    );
+  });
 
-    expect(meta.review_run_id).toBe('review-partial-001');
-    expect(meta.plan_md_fingerprint).toBe('unknown');
-    expect(meta.final_verdict).toBe('PASS');
+  it('throws when review-report.md has no Fingerprint row in legacy fallback', async () => {
+    const id = 'close-legacy-no-fp';
+    await createPlan(tmpDir, id);
+    await derivePlan(tmpDir, id);
+    await validatePlan(tmpDir, id);
+    await reviewPlan(tmpDir, id);
+
+    const planDir = getPlanDir(tmpDir, id);
+
+    // Overwrite review-report.md with partial table (Run ID + Verdict, no Fingerprint)
+    const partialReport = [
+      '# Review Report: close-legacy-no-fp',
+      '',
+      '## Summary',
+      '',
+      '| Field | Value |',
+      '|-------|-------|',
+      '| Run ID | review-no-fp-001 |',
+      '| Verdict | **PASS** |',
+      '',
+    ].join('\n');
+    writeFileSync(join(planDir, 'review-report.md'), partialReport, 'utf-8');
+
+    await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(
+      /Cannot extract Plan Fingerprint from review-report.md/
+    );
   });
 
   it('throws when summary.json exists but is corrupt', async () => {
@@ -745,5 +805,31 @@ describe('closePlanCycle - legacy fallback', () => {
     writeFileSync(summaryPath, '{bad', 'utf-8');
 
     await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(/exists but is corrupt/);
+  });
+
+  it('throws when summary.json has invalid shape', async () => {
+    const id = await setupReviewedPlan(tmpDir, 'close-legacy-bad-shape');
+
+    const reviewRunsDir = join(tmpDir, '_ctx', 'review_runs');
+    const runDirs = readdirSync(reviewRunsDir);
+    const summaryPath = join(reviewRunsDir, runDirs[0], 'summary.json');
+
+    // Write valid JSON but missing required fields
+    writeFileSync(summaryPath, JSON.stringify({ run_id: 123, verdict: true }), 'utf-8');
+
+    await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(/has invalid shape/);
+  });
+
+  it('throws when required snapshot file is missing', async () => {
+    const id = await setupReviewedPlan(tmpDir, 'close-missing-snapshot');
+
+    const planDir = getPlanDir(tmpDir, id);
+
+    // Delete validation-report.yaml to trigger the required file check
+    rmSync(join(planDir, 'validation-report.yaml'));
+
+    await expect(closePlanCycle(tmpDir, id)).rejects.toThrow(
+      /Required snapshot file 'validation-report.yaml' not found/
+    );
   });
 });
