@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "CLI para generar, validar y revisar planes técnicos de desarrollo",
   "type": "module",
+  "license": "MIT",
   "main": "dist/index.js",
   "bin": {
     "plan": "dist/index.js"
